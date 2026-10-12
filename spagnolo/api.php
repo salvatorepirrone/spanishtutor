@@ -21,12 +21,15 @@ function sp_out(array $data): void {
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $d = sp_load($user);
+    $prof = sp_profile($d);
     $sc = [];
     foreach (sp_scenarios() as $id => $s) $sc[] = ['id' => $id, 'label' => $s['label']];
     $themes = [];
     foreach (sp_vocab_themes() as $t) $themes[] = ['id' => $t['id'], 'title' => $t['title']];
     sp_out([
-        'plan' => sp_plan(), 'week' => sp_week_index(), 'scenarios' => $sc, 'stats' => sp_stats($d),
+        'plan' => sp_plan($prof), 'week' => sp_week_index($prof), 'scenarios' => $sc, 'stats' => sp_stats($d),
+        'profile' => ['level' => $prof['level'], 'label' => sp_level_label($prof['level']), 'start' => $prof['start'], 'source' => $prof['source']],
+        'needsPlacement' => !$prof['placed'], 'levels' => SP_LEVELS,
         'grammar' => sp_grammar(), 'themes' => $themes, 'deadline' => SP_DEADLINE, 'start' => SP_START,
         'me' => ['user' => $user, 'role' => (string)(spa_user($user)['role'] ?? 'user'), 'limit' => spa_limit_of($user), 'used' => spa_usage_today($user), 'csrf' => spa_csrf()],
     ]);
@@ -62,7 +65,9 @@ if ($action === 'chat') {
     if ($merged[count($merged) - 1]['role'] !== 'user') sp_fail(400, 'Manca il messaggio dello studente');
 
     $d = sp_load($user);
-    $week = sp_plan()[sp_week_index()];
+    $prof = sp_profile($d);
+    $week = sp_plan($prof)[sp_week_index($prof)];
+    $levelText = sp_level_text($prof['level']);
     $recentErr = [];
     foreach (array_slice($d['errors'], -12) as $e) {
         $recentErr[] = '- ' . ($e['cat'] ?? 'altro') . ': "' . ($e['orig'] ?? '') . '" -> "' . ($e['corr'] ?? '') . '"';
@@ -77,10 +82,10 @@ if ($action === 'chat') {
     ][$mode];
 
     $system = <<<TXT
-Sei un tutor di spagnolo (variante della Spagna) per uno studente italiano adulto di livello appena sotto B1. Obiettivo: arrivare a un B1 solido entro il 2 dicembre. Parli con lui a voce e per iscritto: le tue frasi verranno anche lette ad alta voce.
+Sei un tutor di spagnolo (variante della Spagna) per uno studente italiano adulto, {$levelText}. Obiettivo: arrivare a un B1 solido (o consolidarlo) entro il 2 dicembre. Adatta lessico, lunghezza delle frasi e difficoltà delle domande a questo livello, spingendolo un po' più in alto. Parli con lui a voce e per iscritto: le tue frasi verranno anche lette ad alta voce.
 
 Regole:
-- "reply" è in spagnolo, lessico e grammatica di livello A2-B1, frasi brevi (massimo 3-4 frasi in totale), niente elenchi, niente markdown, niente emoji. Quando introduci una struttura difficile, ripetila in modo naturale.
+- "reply" è in spagnolo, lessico e grammatica adatti al livello dello studente (un po' sopra il suo livello, mai molto oltre), frasi brevi (massimo 3-4 frasi in totale), niente elenchi, niente markdown, niente emoji. Quando introduci una struttura difficile, ripetila in modo naturale.
 - Non tradurre in italiano nel "reply" a meno che lo studente chieda esplicitamente aiuto (scrive "no entiendo", "aiuto", "non so").
 - Correggi gli errori dell'ULTIMO messaggio dello studente in "corrections" (massimo 3, i più importanti per il livello). Spiegazione ("note") in italiano, una frase, chiara. Se la frase è corretta e naturale, "corrections" è vuoto: non inventare errori. Sii incoraggiante ma onesto.
 - Se lo studente scrive in italiano, rispondi in spagnolo semplice, invitalo a riprovare in spagnolo e fornisci la frase giusta in "suggestion".
@@ -264,14 +269,15 @@ if ($action === 'exercises') {
     $kind = in_array($in['kind'] ?? '', ['misti', 'scelta', 'completa', 'traduci'], true) ? $in['kind'] : 'misti';
     $n = max(4, min(12, (int)($in['n'] ?? 8)));
     $d = sp_load($user);
+    $prof = sp_profile($d);
     if ($topicId === 'errori') {
         $lines = [];
         foreach (array_slice($d['errors'], -15) as $e) $lines[] = '- ' . ($e['cat'] ?? '') . ': "' . ($e['orig'] ?? '') . '" -> "' . ($e['corr'] ?? '') . '"';
         $what = $lines ? "gli errori recenti dello studente (crea frasi NUOVE che mettano alla prova le stesse regole):\n" . implode("\n", $lines)
-                       : 'il tema della settimana: ' . sp_plan()[sp_week_index()]['focus'];
+                       : 'il tema della settimana: ' . sp_plan($prof)[sp_week_index($prof)]['focus'];
         $label = 'I miei errori';
     } elseif ($topicId === 'mix') {
-        $w = sp_plan()[sp_week_index()];
+        $w = sp_plan($prof)[sp_week_index($prof)];
         $what = 'il tema della settimana: ' . $w['focus'] . ', con un po\' di ripasso di argomenti già visti';
         $label = 'Tema della settimana';
     } else {
@@ -284,7 +290,7 @@ if ($action === 'exercises') {
         'misti' => 'un mix equilibrato dei tre tipi',
         'scelta' => 'solo tipo "scelta"', 'completa' => 'solo tipo "completa"', 'traduci' => 'solo tipo "traduci"',
     ][$kind];
-    $system = SP_BASE_RULES . "\nCrea esercizi per studenti italiani di livello A2-B1 (B1 basso). Forma:\n"
+    $system = SP_BASE_RULES . "\nCrea esercizi per uno studente italiano, " . sp_level_text($prof['level']) . ". Forma:\n"
         . '{"items":[{"type":"scelta","q":"frase con ___ al posto del vuoto","options":["a","b","c","d"],"answer":0,"why":"spiegazione breve in italiano"},'
         . '{"type":"completa","q":"frase con ___ e, tra parentesi, il verbo o la parola base da coniugare/adattare","answer":"forma corretta","alts":["altre forme accettabili"],"why":"..."},'
         . '{"type":"traduci","q":"frase da tradurre in spagnolo, in italiano","ref":"traduzione spagnola di riferimento","why":"punto di grammatica in gioco"}]}'
@@ -420,6 +426,23 @@ if ($action === 'deck_review') {
         return sp_log_activity($d);
     });
     sp_out(['ok' => $found, 'stats' => sp_stats($d)]);
+}
+
+// ---------------------------------------------------------------- livello e piano
+
+if ($action === 'profile_set') {
+    $level = (string)($in['level'] ?? '');
+    if (!in_array($level, SP_LEVELS, true)) sp_fail(400, 'Livello non valido');
+    $source = ($in['source'] ?? '') === 'test' ? 'test' : 'self';
+    $d = sp_update($user, function ($d) use ($level, $source) {
+        $hist = is_array($d['profile']['history'] ?? null) ? $d['profile']['history'] : [];
+        $hist[] = ['t' => sp_today(), 'level' => $level, 'source' => $source];
+        $d['profile'] = ['level' => $level, 'start' => sp_today(), 'placed' => true, 'source' => $source, 'history' => array_slice($hist, -20)];
+        return $d;
+    });
+    $prof = sp_profile($d);
+    sp_out(['profile' => ['level' => $prof['level'], 'label' => sp_level_label($prof['level']), 'start' => $prof['start'], 'source' => $prof['source']],
+            'plan' => sp_plan($prof), 'week' => sp_week_index($prof)]);
 }
 
 // ---------------------------------------------------------------- test

@@ -16,9 +16,15 @@
     'B2': 'B2: oltre l\'obiettivo'
   };
 
-  function intro(root) {
+  var placement = false;   // true quando il test serve a stabilire il livello di partenza
+
+  function intro(root, arg) {
+    placement = arg === 'placement' || !!(SP.catalog && SP.catalog.needsPlacement && arg !== 'normal');
     var page = el('div', 'page');
-    page.appendChild(el('h2', '', 'Test di livello'));
+    page.appendChild(el('h2', '', placement ? 'Test di ingresso' : 'Test di livello'));
+    if (placement) {
+      page.appendChild(el('p', 'muted', 'Serve a capire da dove partire: in base al risultato preparo il piano di studio e adatto conversazione ed esercizi al tuo livello. Non è un esame: se non sai una risposta, scegli quella che ti sembra più naturale.'));
+    }
     var c = el('div', 'card');
     c.appendChild(el('p', '', '20 domande a scelta multipla (tempi verbali, forme, vocabolario, comprensione) e un breve testo scritto, valutato dal tutor. Ogni volta le domande sono diverse. Richiede circa 15 minuti.'));
     c.appendChild(el('p', 'muted', 'È una stima indicativa, non una certificazione: serve a vedere i progressi da qui al 2 dicembre. Consiglio un test a settimana.'));
@@ -27,6 +33,7 @@
     var area = el('div');
     page.appendChild(c);
     page.appendChild(area);
+    var again = null;
     start.addEventListener('click', function () {
       start.disabled = true;
       var stop = SP.loading(c, 'Preparo il test… (può richiedere fino a un minuto)');
@@ -199,9 +206,39 @@
     });
     page.appendChild(rev);
 
-    var again = el('button', 'primary', 'Torna ai progressi');
-    again.addEventListener('click', function () { SP.clear(SP.$('view')); SP.sections.test.mount(SP.$('view')); });
-    page.appendChild(again);
+    // Livello e piano: il test di ingresso li imposta; un test successivo propone di aggiornarli.
+    var plan = el('div', 'card');
+    page.insertBefore(plan, rev);
+    var cur = SP.catalog && SP.catalog.profile ? SP.catalog.profile.level : null;
+    function setLevel(label) {
+      return SP.call({ action: 'profile_set', level: level, source: 'test' }).then(function () { return SP.reload(); });
+    }
+    if (placement) {
+      var st = SP.loading(plan, 'Preparo il tuo piano…');
+      setLevel().then(function () {
+        st();
+        plan.appendChild(el('h3', '', 'Il tuo punto di partenza: ' + (LEVEL_TEXT[level] || level)));
+        plan.appendChild(el('p', '', 'Ho preparato un piano di 8 settimane per questo livello. Conversazione, esercizi e argomenti consigliati ora tengono conto del tuo livello.'));
+        var go = el('button', 'primary', 'Vedi il mio piano');
+        go.addEventListener('click', function () { SP.go('piano'); });
+        plan.appendChild(go);
+      }).catch(function (e) { st(); plan.appendChild(el('div', 'err', e.message)); });
+    } else if (cur && cur !== level) {
+      plan.appendChild(el('p', '', 'Il tuo piano è impostato sul livello «' + cur + '»; questo test indica «' + level + '».'));
+      var up = el('button', 'primary', 'Aggiorna il mio piano a ' + level);
+      up.addEventListener('click', function () {
+        up.disabled = true;
+        setLevel().then(function () { SP.go('piano'); }).catch(function (e) { plan.appendChild(el('div', 'err', e.message)); up.disabled = false; });
+      });
+      plan.appendChild(up);
+      plan.appendChild(el('p', 'muted', 'Il piano ripartirà dalla settimana 1.'));
+    } else {
+      plan.appendChild(el('p', 'muted', 'Il livello stimato coincide con quello del tuo piano: nessuna modifica.'));
+    }
+
+    var back = el('button', '', 'Torna ai progressi');
+    back.addEventListener('click', function () { SP.clear(SP.$('view')); SP.sections.test.mount(SP.$('view'), 'normal'); });
+    page.appendChild(back);
 
     SP.call({
       action: 'test_result', correct: correct, total: items.length, sections: secs, level: level,
@@ -209,5 +246,5 @@
     }).catch(function () {});
   }
 
-  SP.sections.test = { mount: function (root) { intro(root); } };
+  SP.sections.test = { mount: function (root, arg) { intro(root, arg); } };
 })();

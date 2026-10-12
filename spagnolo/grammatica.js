@@ -8,6 +8,20 @@
     page.appendChild(el('h2', '', 'Grammatica'));
     page.appendChild(el('p', 'muted', 'Scegli un argomento: spiegazione in italiano, tabelle, esempi ed errori tipici. In fondo a ogni lezione trovi gli esercizi su quell\'argomento.'));
     var prog = (SP.stats && SP.stats.exProgress) || {};
+    var rec = (SP.catalog.plan[SP.catalog.week] || {}).topics || [];
+    if (rec.length) {
+      page.appendChild(el('div', 'sec-title', 'Per te questa settimana'));
+      var rg = el('div', 'grid');
+      rec.forEach(function (id) {
+        var f = findTopic(id);
+        if (!f) return;
+        var a = el('a', 'tile', f.t.title);
+        a.href = '#/grammatica/' + encodeURIComponent(id);
+        a.appendChild(el('div', 'sub', f.s.title));
+        rg.appendChild(a);
+      });
+      page.appendChild(rg);
+    }
     SP.catalog.grammar.forEach(function (s) {
       page.appendChild(el('div', 'sec-title', s.title));
       var g = el('div', 'grid');

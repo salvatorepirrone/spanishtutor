@@ -48,6 +48,24 @@ var SP = (function () {
     f.appendChild(t); f.appendChild(b); box.appendChild(f);
   };
 
+  // Riga sotto il titolo: livello, settimana del piano e tema; cliccandola si apre il piano completo.
+  sp.renderWeek = function () {
+    var c = sp.catalog, box = sp.clear(sp.$('week'));
+    if (!c) return;
+    var w = c.plan[c.week];
+    var a = sp.el('a', '', 'Livello ' + c.profile.label + ' · settimana ' + (c.week + 1) + ' di ' + c.plan.length + ' · ' + w.title);
+    a.href = '#/piano'; a.title = 'Vedi il piano completo';
+    box.appendChild(a);
+  };
+
+  // Rilegge lo stato dal server (dopo un cambio di livello) e aggiorna testata e piano.
+  sp.reload = function () {
+    return fetch(API, { credentials: 'same-origin' }).then(function (r) { return r.json(); }).then(function (c) {
+      sp.catalog = c; sp.setStats(c.stats); sp.renderMe(c.me); sp.renderWeek();
+      return c;
+    });
+  };
+
   sp.setStats = function (s) {
     if (!s) return;
     sp.stats = s;
@@ -137,8 +155,9 @@ var SP = (function () {
         sp.catalog = c;
         sp.setStats(c.stats);
         sp.renderMe(c.me);
-        var w = c.plan[c.week];
-        sp.$('week').textContent = 'Settimana ' + (c.week + 1) + ' di ' + c.plan.length + ' · ' + w.title + ' — ' + w.focus;
+        sp.renderWeek();
+        // Al primo accesso si propone il test di livello, da cui dipende il piano.
+        if (c.needsPlacement && (!location.hash || location.hash === '#/conversazione' || location.hash === '#/')) location.hash = '#/benvenuto';
         window.addEventListener('hashchange', route);
         route();
       })

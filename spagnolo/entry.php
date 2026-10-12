@@ -61,7 +61,7 @@ if (in_array($rel, ['api.php', 'account.php', 'admin.php'], true)) {
 }
 
 // File statici dell'app.
-$known = ['index.html', 'common.js', 'conversazione.js', 'grammatica.js', 'esercizi.js', 'vocabolario.js', 'test.js'];
+$known = ['index.html', 'common.js', 'conversazione.js', 'grammatica.js', 'esercizi.js', 'vocabolario.js', 'test.js', 'benvenuto.js', 'piano.js'];
 if (in_array($rel, $known, true) && is_file(__DIR__ . '/' . $rel)) $serve();
 
 http_response_code(404);

@@ -56,7 +56,8 @@ function spa_update(string $name, callable $fn): array {
 // ---------------------------------------------------------------- utenti
 
 function spa_valid_username(string $u): bool {
-    return (bool)preg_match('/^[a-z0-9][a-z0-9._-]{2,31}$/', $u) && strpos($u, '..') === false;
+    // Nome semplice oppure indirizzo email: lettere minuscole, numeri e . _ - @ + (niente spazi né barre: finisce in un nome di file).
+    return (bool)preg_match('/^[a-z0-9][a-z0-9._@+-]{2,63}$/', $u) && strpos($u, '..') === false;
 }
 
 function spa_user(string $name): ?array {
@@ -93,7 +94,7 @@ function spa_admin_count(array $users): int {
 // Crea (o rinnova per un utente esistente) un link a uso singolo. Restituisce l'indirizzo completo.
 function spa_invite(string $username, string $role = 'user', ?int $limit = null): string {
     $username = strtolower($username);
-    if (!spa_valid_username($username)) throw new InvalidArgumentException('Nome utente non valido: 3-32 caratteri tra lettere minuscole, numeri, punto, trattino.');
+    if (!spa_valid_username($username)) throw new InvalidArgumentException('Nome utente non valido: da 3 a 64 caratteri tra lettere, numeri e . _ - @ + (senza spazi).');
     $role = in_array($role, SPA_ROLES, true) ? $role : 'user';
     spa_update('users', function ($users) use ($username, $role, $limit) {
         if (!isset($users[$username])) {

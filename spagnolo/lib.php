@@ -27,24 +27,84 @@ function sp_str($v, int $max): string {
 
 // ---------------------------------------------------------------- cataloghi
 
-function sp_plan(): array {
-    return [
-        ['from' => '2026-10-12', 'title' => 'Presente e irregolari', 'focus' => 'presente indicativo, verbi irregolari e con dittongo (e>ie, o>ue), ser/estar, descrivere sé stessi, routine quotidiana'],
-        ['from' => '2026-10-19', 'title' => 'Passato: indefinido e imperfecto', 'focus' => 'pretérito indefinido (regolari e irregolari) contro imperfecto, raccontare cosa è successo, marcatori temporali'],
-        ['from' => '2026-10-26', 'title' => 'Perfecto e narrazione', 'focus' => 'pretérito perfecto, pluscuamperfecto, connettori per raccontare (primero, después, mientras, de repente), esperienze di vita'],
-        ['from' => '2026-11-02', 'title' => 'Futuro, condizionale, por/para', 'focus' => 'futuro, condizionale, piani e ipotesi semplici, por contro para, comparativi'],
-        ['from' => '2026-11-09', 'title' => 'Subjuntivo (1)', 'focus' => 'presente de subjuntivo: desideri, consigli, dubbi, emozioni (quiero que, espero que, es importante que)'],
-        ['from' => '2026-11-16', 'title' => 'Imperativo e pronomi', 'focus' => 'imperativo affermativo e negativo, pronomi diretti e indiretti, doppi pronomi (se lo), verbi come gustar'],
-        ['from' => '2026-11-23', 'title' => 'Opinioni e ipotesi', 'focus' => 'esprimere opinioni e argomentare, si + presente, subjuntivo con cuando, relative, connettori (sin embargo, aunque, por eso)'],
-        ['from' => '2026-11-30', 'title' => 'Simulazione finale', 'focus' => 'ripasso generale e conversazione libera di 10-15 minuti su temi vari, come in un esame B1+'],
-    ];
+const SP_LEVELS = ['A2', 'B1-', 'B1', 'B1+', 'B2'];
+
+function sp_level_label(string $level): string {
+    return ['A2' => 'A2', 'B1-' => 'appena sotto il B1', 'B1' => 'B1', 'B1+' => 'B1+', 'B2' => 'B2'][$level] ?? 'appena sotto il B1';
 }
 
-function sp_week_index(): int {
-    $today = sp_today();
-    $idx = 0;
-    foreach (sp_plan() as $i => $w) if ($today >= $w['from']) $idx = $i;
-    return $idx;
+// Descrizione del livello per le istruzioni date al modello.
+function sp_level_text(string $level): string {
+    return [
+        'A2' => 'livello A2 (base): conosce il presente e frasi semplici, fatica con i passati, i pronomi e le preposizioni; usa frasi molto brevi e un lessico limitato',
+        'B1-' => 'livello appena sotto il B1: si fa capire ma sbaglia spesso con i tempi del passato, ser/estar, pronomi e subjuntivo',
+        'B1' => 'livello B1: se la cava nelle situazioni comuni; gli errori tipici sono subjuntivo, pronomi doppi, preposizioni e tempi del passato nelle frasi lunghe',
+        'B1+' => 'livello B1+ (quasi B2): parla con una certa scioltezza; va spinto su subjuntivo, periodo ipotetico, connettori, registro e lessico meno comune',
+        'B2' => 'livello B2: parla con scioltezza; va spinto su sfumature, espressioni idiomatiche, registro formale e informale e strutture complesse',
+    ][$level] ?? 'livello appena sotto il B1';
+}
+
+// Piano di 8 settimane in base al livello di partenza. "topics" sono id degli argomenti di grammatica.
+function sp_tracks(): array {
+    $w = function ($title, $focus, array $topics) { return ['title' => $title, 'focus' => $focus, 'topics' => $topics]; };
+    $b1minus = [
+        $w('Presente e irregolari', 'presente indicativo, verbi irregolari e con dittongo (e>ie, o>ue), ser/estar, descrivere sé stessi, routine quotidiana', ['pres-irregolare', 'ser-estar', 'haber-tener']),
+        $w('Passato: indefinido e imperfecto', 'pretérito indefinido (regolari e irregolari) contro imperfecto, raccontare cosa è successo, marcatori temporali', ['indefinido', 'imperfecto', 'indef-vs-imperf']),
+        $w('Perfecto e narrazione', 'pretérito perfecto, pluscuamperfecto, connettori per raccontare (primero, después, mientras, de repente), esperienze di vita', ['perfecto', 'pluscuamperfecto', 'connettori']),
+        $w('Futuro, condizionale, por/para', 'futuro, condizionale, piani e ipotesi semplici, por contro para, comparativi', ['futuro', 'condicional', 'por-para', 'comparativi']),
+        $w('Subjuntivo', 'presente de subjuntivo: desideri, opinioni, consigli, dubbi, emozioni (quiero que, espero que, es importante que)', ['subj-presente', 'subj-usi']),
+        $w('Imperativo e pronomi', 'imperativo affermativo e negativo, pronomi diretti e indiretti, doppi pronomi (se lo), verbi come gustar', ['imperativo', 'pron-diretti', 'pron-indiretti', 'pron-doppi', 'gustar']),
+        $w('Opinioni e ipotesi', 'esprimere opinioni e argomentare, si + presente, subjuntivo con cuando, relative, connettori (sin embargo, aunque, por eso)', ['connettori', 'relative', 'ipotetiche']),
+        $w('Simulazione finale', 'ripasso generale e conversazione libera di 10-15 minuti su temi vari, come in un esame B1', ['indef-vs-imperf', 'subj-usi', 'pron-doppi']),
+    ];
+    $a2 = [
+        $w('Presente regolare e articoli', 'presente dei verbi regolari, articoli, genere e numero, presentarsi e descrivere la propria giornata', ['pres-regolare', 'articoli', 'genere-numero']),
+        $w('Irregolari, ser, estar, haber', 'verbi irregolari più frequenti, ser contro estar, haber e tener, descrivere persone e luoghi', ['pres-irregolare', 'ser-estar', 'haber-tener']),
+        $w('Gustar, possessivi, domande', 'gustar e verbi simili, possessivi, dimostrativi, fare domande e parlare dei propri gusti', ['gustar', 'possessivi', 'interrogativi', 'dimostrativi']),
+        $w('Pronomi e riflessivi', 'pronomi soggetto, complemento diretto, verbi riflessivi (routine), evitare le ripetizioni', ['pron-soggetto', 'pron-diretti', 'pron-riflessivi']),
+        $w('Pretérito perfecto', 'raccontare cosa si è fatto oggi o di recente, participio, avverbi di tempo (ya, todavía no)', ['perfecto', 'participio', 'avv-tempo']),
+        $w('Indefinido (base)', 'raccontare il passato: indefinido dei verbi regolari e dei più comuni irregolari (ir, ser, hacer, tener)', ['indefinido', 'avv-quantita', 'a-en-de']),
+        $w('Imperfecto e futuro', 'descrivere abitudini nel passato, ir a + infinito, futuro, confronti', ['imperfecto', 'futuro', 'comparativi']),
+        $w('Ripasso e prime conversazioni', 'ripasso, indefinido contro imperfecto in frasi semplici, por contro para, mini conversazioni di 5 minuti', ['indef-vs-imperf', 'por-para', 'connettori']),
+    ];
+    $b1 = [
+        $w('Passati sicuri', 'indefinido, imperfecto, perfecto e pluscuamperfecto in racconti più lunghi, scelta del tempo giusto', ['indef-vs-imperf', 'pluscuamperfecto', 'participio']),
+        $w('Pronomi complessi', 'doppi pronomi, le/se, pronomi dopo preposizione, indefiniti e negativi', ['pron-doppi', 'pron-indiretti', 'pron-preposizione', 'indefiniti']),
+        $w('Subjuntivo (1)', 'presente de subjuntivo: forme e usi principali (desideri, consigli, dubbi, emozioni)', ['subj-presente', 'subj-usi']),
+        $w('Imperativo, condizionale, perifrasi', 'imperativo, condizionale di cortesia e consiglio, perifrasi verbali', ['imperativo', 'condicional', 'perifrasi']),
+        $w('Preposizioni e verbi', 'por/para, a personal, verbi con preposizione fissa, pedir/preguntar, saber/conocer', ['por-para', 'a-personal', 'a-en-de', 'pedir-preguntar', 'saber-conocer']),
+        $w('Ipotesi e relative', 'periodo ipotetico, frasi relative, connettori per argomentare', ['ipotetiche', 'relative', 'connettori']),
+        $w('Stile indiretto e forme impersonali', 'riportare ciò che è stato detto, se impersonale, verbi di cambiamento', ['stile-indiretto', 'impersonali', 'cambio']),
+        $w('Simulazione finale', 'conversazione libera di 10-15 minuti con opinioni, racconti e ipotesi, come in un esame B1+', ['subj-usi', 'indef-vs-imperf', 'ipotetiche']),
+    ];
+    $b1p = [
+        $w('Subjuntivo avanzato', 'subjuntivo con cuando, aunque, para que, relative e espressioni di dubbio; contrasto indicativo/subjuntivo', ['subj-usi', 'subj-presente']),
+        $w('Condizionale e ipotesi', 'condizionale, periodo ipotetico (si + imperfecto de subjuntivo), consigli e desideri irreali', ['condicional', 'ipotetiche']),
+        $w('Discorso indiretto', 'riportare dichiarazioni e domande, concordanza dei tempi, pluscuamperfecto', ['stile-indiretto', 'pluscuamperfecto']),
+        $w('Argomentare', 'connettori, relative, strutturare un discorso con tesi, esempi e conclusioni', ['connettori', 'relative']),
+        $w('Cambio, perifrasi, impersonali', 'verbi di cambiamento, perifrasi, forme impersonali e passive', ['cambio', 'perifrasi', 'impersonali']),
+        $w('Sfumature', 'por/para, a personal, saber/conocer, pedir/preguntar e altre coppie che confondono', ['por-para', 'a-personal', 'saber-conocer', 'pedir-preguntar']),
+        $w('Avverbi, quantificatori, confronti', 'avverbi in -mente, quantificatori, comparativi e superlativi, lessico meno comune', ['avv-mente', 'quantificatori', 'comparativi']),
+        $w('Simulazione finale', 'conversazione libera di 15 minuti su temi di attualità, con opinioni argomentate, come in un esame B2 iniziale', ['subj-usi', 'ipotetiche', 'connettori']),
+    ];
+    return ['A2' => $a2, 'B1-' => $b1minus, 'B1' => $b1, 'B1+' => $b1p, 'B2' => $b1p];
+}
+
+// Profilo dell'utente: livello di partenza e data da cui parte il piano.
+function sp_profile(array $d): array {
+    $p = is_array($d['profile'] ?? null) ? $d['profile'] : [];
+    $level = in_array($p['level'] ?? '', SP_LEVELS, true) ? $p['level'] : 'B1-';
+    return ['level' => $level, 'start' => (string)($p['start'] ?? SP_START), 'placed' => !empty($p['placed']), 'source' => (string)($p['source'] ?? '')];
+}
+
+function sp_plan(array $profile): array { return sp_tracks()[$profile['level']]; }
+
+// Settimana corrente del piano: dal giorno di partenza, una ogni 7 giorni; dopo l'ultima si resta sull'ultima.
+function sp_week_index(array $profile): int {
+    $start = DateTime::createFromFormat('Y-m-d', $profile['start'], new DateTimeZone('Europe/Rome'));
+    if (!$start) return 0;
+    $days = (int)$start->setTime(0, 0)->diff((new DateTime('now', new DateTimeZone('Europe/Rome')))->setTime(0, 0))->format('%r%a');
+    return max(0, min(7, intdiv(max(0, $days), 7)));
 }
 
 function sp_scenarios(): array {
@@ -183,7 +243,7 @@ function sp_file(string $user): string {
 }
 
 function sp_defaults(array $d): array {
-    return $d + ['days' => [], 'errors' => [], 'vocab' => [], 'deck' => [], 'ex' => [], 'tests' => []];
+    return $d + ['days' => [], 'errors' => [], 'vocab' => [], 'deck' => [], 'ex' => [], 'tests' => [], 'profile' => null];
 }
 
 function sp_load(string $user): array {
