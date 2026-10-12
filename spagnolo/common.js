@@ -130,9 +130,9 @@ var SP = (function () {
 
   // ---- Router a schede: #/sezione/parametro
   function route() {
-    var parts = (location.hash || '#/conversazione').replace(/^#\/?/, '').split('/');
-    var name = parts[0] || 'conversazione';
-    if (!sp.sections[name]) name = 'conversazione';
+    var parts = (location.hash || '#/home').replace(/^#\/?/, '').split('/');
+    var name = parts[0] || 'home';
+    if (!sp.sections[name]) name = 'home';
     var arg = parts[1] ? decodeURIComponent(parts[1]) : '';
     if (sp.current && sp.sections[sp.current].unmount) sp.sections[sp.current].unmount();
     sp.stopSpeaking();
@@ -157,7 +157,7 @@ var SP = (function () {
         sp.renderMe(c.me);
         sp.renderWeek();
         // Al primo accesso si propone il test di livello, da cui dipende il piano.
-        if (c.needsPlacement && (!location.hash || location.hash === '#/conversazione' || location.hash === '#/')) location.hash = '#/benvenuto';
+        if (c.needsPlacement && (!location.hash || location.hash === '#/home' || location.hash === '#/')) location.hash = '#/benvenuto';
         window.addEventListener('hashchange', route);
         route();
       })

@@ -3,6 +3,7 @@
 if (!defined('SP_API')) { http_response_code(404); exit; }
 
 require_once __DIR__ . '/access.php';
+require_once __DIR__ . '/variety.php';
 
 const SP_MODEL = 'claude-sonnet-5-5';
 const SP_DEADLINE = '2026-12-02';
@@ -232,6 +233,13 @@ function sp_writing_prompts(): array {
         'Esprimi la tua opinione sull\'importanza di imparare le lingue straniere, con almeno due ragioni (5-6 frasi).',
         'Descrivi la tua città o il tuo quartiere: cosa ti piace, cosa cambieresti (5-6 frasi).',
         'Racconta un ricordo della tua infanzia usando i tempi del passato (5-6 frasi).',
+        'Scrivi una mail a un albergo per prenotare una camera e chiedere informazioni sui servizi (5-6 frasi).',
+        'Racconta il film, la serie o il libro che hai preferito di recente e perché lo consiglieresti (5-6 frasi).',
+        'Descrivi la persona che ammiri di più: com\'è, cosa ha fatto, perché la ammiri (5-6 frasi).',
+        'Scrivi cosa farai nel prossimo fine settimana e cosa faresti se avessi più tempo libero (5-6 frasi).',
+        'Racconta una giornata andata male e come hai risolto i problemi (5-6 frasi).',
+        'Spiega a un amico spagnolo come si prepara un piatto che sai cucinare (5-6 frasi).',
+        'Esprimi la tua opinione sul lavorare da casa: vantaggi, svantaggi e cosa preferisci (5-6 frasi).',
     ];
 }
 
@@ -243,7 +251,7 @@ function sp_file(string $user): string {
 }
 
 function sp_defaults(array $d): array {
-    return $d + ['days' => [], 'errors' => [], 'vocab' => [], 'deck' => [], 'ex' => [], 'tests' => [], 'profile' => null];
+    return $d + ['days' => [], 'errors' => [], 'vocab' => [], 'deck' => [], 'ex' => [], 'tests' => [], 'profile' => null, 'recent' => null];
 }
 
 function sp_load(string $user): array {

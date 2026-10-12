@@ -4,6 +4,7 @@
   var el = SP.el;
   var ui = null;                 // elementi creati una volta sola e riattaccati a ogni visita
   var history = [];              // {role:'user'|'assistant', text}
+  var topic = '';                // argomento della sessione, scelto dal server alla prima risposta
   var busy = false, listening = false, lastVoice = false, rec = null;
   var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   var secure = window.isSecureContext;
@@ -41,6 +42,8 @@
   }
 
   var wantListen = false, sendOnEnd = false, committed = '', silenceTimer = null, quickEnds = 0;
+  var recActive = false;         // true tra l'avvio e la fine di una sessione del riconoscimento
+  var boxFromVoice = false;      // il testo nella casella viene dal microfono (non l'hai scritto tu)
 
   function setMicUi(on) {
     ui.mic.classList.toggle('on', on);
@@ -50,20 +53,30 @@
     ui.status.textContent = on ? 'Ti ascolto… premi ⏹ quando hai finito.' : '';
   }
 
+  // Scollega una sessione del riconoscimento: non deve più scrivere nella casella, nemmeno con eventi in ritardo.
+  function detach(r) {
+    if (!r) return;
+    r.onresult = r.onend = r.onerror = r.onstart = null;
+    try { r.abort(); } catch (e) {}
+  }
+
   // Ferma l'ascolto; con send=true il testo raccolto viene inviato, altrimenti resta nella casella.
   function stopListening(send) {
     wantListen = false; sendOnEnd = !!send;
     clearTimeout(silenceTimer);
-    if (rec) { try { rec.stop(); } catch (e) { onFinished(); } } else onFinished();
+    if (rec && recActive) { try { rec.stop(); return; } catch (e) {} }
+    onFinished();   // nessuna sessione attiva (per esempio nella pausa tra due riaperture): si chiude subito
   }
 
   function onFinished() {
     clearTimeout(silenceTimer);
     var was = listening;
-    listening = false; rec = null;
+    detach(rec);
+    listening = false; rec = null; recActive = false; committed = '';
     if (ui) setMicUi(false);
-    if (was && sendOnEnd && ui.box.value.trim() && SP.current === 'conversazione') { lastVoice = true; send(); }
+    var send_ = was && sendOnEnd && ui && ui.box.value.trim() && SP.current === 'conversazione';
     sendOnEnd = false;
+    if (send_) { lastVoice = true; send(); }
   }
 
   // In modalità mani libere una pausa lunga chiude il turno; altrimenti si aspetta sempre il tasto Stop.
@@ -72,21 +85,37 @@
     if (opt('hands')) silenceTimer = setTimeout(function () { stopListening(true); }, 3500);
   }
 
+  // Trascrizione di una sessione. Alcuni browser (soprattutto su telefono) ripetono nei risultati successivi
+  // il testo già riconosciuto: se un risultato comincia con il precedente, sostituisce il precedente.
+  function transcript(results) {
+    var finals = [], interim = '';
+    for (var i = 0; i < results.length; i++) {
+      var t = String(results[i][0].transcript || '').trim();
+      if (!t) continue;
+      if (results[i].isFinal) {
+        var last = finals.length ? finals[finals.length - 1] : '';
+        if (last && t.toLowerCase().indexOf(last.toLowerCase()) === 0) finals[finals.length - 1] = t; else finals.push(t);
+      } else interim += (interim ? ' ' : '') + t;
+    }
+    return { fin: finals.join(' '), interim: interim };
+  }
+
   function beginRecognition() {
     var r = new SR();
     rec = r;
     r.lang = 'es-ES'; r.interimResults = true; r.continuous = true; r.maxAlternatives = 1;
     var startedAt = Date.now();
+    r.onstart = function () { if (rec === r) recActive = true; };
     r.onresult = function (e) {
-      var fin = '', interim = '';
-      for (var i = 0; i < e.results.length; i++) {
-        if (e.results[i].isFinal) fin += e.results[i][0].transcript; else interim += e.results[i][0].transcript;
-      }
-      ui.box.value = (committed + fin + ' ' + interim).trim();
+      if (rec !== r) return;     // evento di una sessione vecchia: ignorato
+      var t = transcript(e.results);
+      ui.box.value = (committed + t.fin + ' ' + t.interim).replace(/\s+/g, ' ').trim();
+      boxFromVoice = true;
       ui.box.style.height = 'auto'; ui.box.style.height = Math.min(ui.box.scrollHeight, 120) + 'px';
       armSilence();
     };
     r.onerror = function (e) {
+      if (rec !== r) return;
       if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
         wantListen = false; ui.hands.checked = false;
         note('Permesso al microfono negato: abilitalo nelle impostazioni del sito.', 'err');
@@ -98,12 +127,17 @@
     };
     r.onend = function () {
       if (rec !== r) return;
+      recActive = false;
       committed = ui.box.value.trim();
       if (committed) committed += ' ';
       if (wantListen) {
         // Il browser chiude da solo dopo un po' di silenzio: si riapre, a meno che continui a fallire subito.
         quickEnds = Date.now() - startedAt < 500 ? quickEnds + 1 : 0;
-        if (quickEnds < 4) { setTimeout(function () { if (wantListen) beginRecognition(); }, 150); return; }
+        if (quickEnds < 4) {
+          detach(r); rec = null;
+          setTimeout(function () { if (wantListen && !rec) beginRecognition(); }, 150);
+          return;
+        }
         wantListen = false;
       }
       onFinished();
@@ -114,7 +148,10 @@
   function startListening() {
     if (!SR || !secure || busy || listening) return;
     SP.stopSpeaking();
-    wantListen = true; listening = true; quickEnds = 0;
+    wantListen = true; listening = true; quickEnds = 0; recActive = false;
+    // Il testo lasciato da un ascolto precedente (suggerimento, errore di rete) non si riporta nella nuova frase:
+    // si tiene solo quello che hai scritto tu a mano.
+    if (boxFromVoice) { ui.box.value = ''; boxFromVoice = false; }
     committed = ui.box.value.trim() ? ui.box.value.trim() + ' ' : '';
     setMicUi(true);
     beginRecognition();
@@ -126,12 +163,16 @@
     var text = ui.box.value.trim();
     if (!text && !opts.start) return;
     var voice = lastVoice; lastVoice = false;
-    if (text) { history.push({ role: 'user', text: text }); addMsg('user', text); ui.box.value = ''; ui.box.style.height = ''; }
+    if (text) { history.push({ role: 'user', text: text }); addMsg('user', text); ui.box.value = ''; ui.box.style.height = ''; boxFromVoice = false; committed = ''; }
     busy = true; ui.send.disabled = true;
     var wait = el('div', 'sys', '…'); ui.log.appendChild(wait); scrollDown();
-    SP.call({ action: 'chat', messages: history, mode: ui.mode.value, scenario: ui.scenario.value, voice: voice })
+    SP.call({ action: 'chat', messages: history, mode: ui.mode.value, scenario: ui.scenario.value, voice: voice, topic: topic })
       .then(function (r) {
         wait.remove();
+        if (!topic && r.topic) {
+          topic = r.topic;
+          note((ui.mode.value === 'conversazione' ? 'Oggi: ' : 'Contesto: ') + r.topic, 'sys');
+        }
         if (text) addFeedback(r);
         history.push({ role: 'assistant', text: r.reply });
         addMsg('tutor', r.reply);
@@ -140,7 +181,7 @@
       })
       .catch(function (e) {
         wait.remove(); note(e.message || 'Errore di rete', 'err');
-        if (text) { history.pop(); var mine = ui.log.querySelectorAll('.msg.me'); if (mine.length) mine[mine.length - 1].remove(); ui.box.value = text; }
+        if (text) { history.pop(); var mine = ui.log.querySelectorAll('.msg.me'); if (mine.length) mine[mine.length - 1].remove(); ui.box.value = text; boxFromVoice = voice; }
       })
       .then(function () { busy = false; ui.send.disabled = false; });
   }
@@ -172,7 +213,7 @@
 
   function restart() {
     stopListening(false); SP.stopSpeaking();
-    history = []; SP.clear(ui.log);
+    history = []; topic = ''; SP.clear(ui.log);
     SP.pref('mode', ui.mode.value); SP.pref('scenario', ui.scenario.value);
     note('Premi 🎤 per parlare o scrivi. Ti correggo dopo ogni frase.');
     send({ start: true });
@@ -226,7 +267,7 @@
     ui.send.addEventListener('click', function () { if (listening) stopListening(true); else send(); });
     ui.hint.addEventListener('click', function () { askHint(1); });
     ui.box.addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } });
-    ui.box.addEventListener('input', function () { ui.box.style.height = 'auto'; ui.box.style.height = Math.min(ui.box.scrollHeight, 120) + 'px'; });
+    ui.box.addEventListener('input', function () { boxFromVoice = false; ui.box.style.height = 'auto'; ui.box.style.height = Math.min(ui.box.scrollHeight, 120) + 'px'; });
 
     ui.parts = [bar, ui.log, foot];
   }

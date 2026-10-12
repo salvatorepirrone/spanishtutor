@@ -68,6 +68,16 @@ if ($action === 'chat') {
     $prof = sp_profile($d);
     $week = sp_plan($prof)[sp_week_index($prof)];
     $levelText = sp_level_text($prof['level']);
+
+    // Varietà: argomento della sessione (scelto una volta e rimandato dal browser) e "mossa" diversa a ogni turno.
+    $topic = sp_str($in['topic'] ?? '', 160);
+    $newTopic = false;
+    if ($topic === '') { $topic = sp_pick_topic($d, $mode, $scenario); $newTopic = true; }
+    $move = sp_pick_one(sp_moves());
+    $variety = ($mode === 'conversazione' ? 'Argomento o situazione di questa sessione: ' . $topic . ". Parti da qui, poi lascia che la conversazione evolva in modo naturale.\n" : 'Contesto da usare per gli esempi di questa sessione: ' . $topic . ".\n")
+        . "Per questo turno, quando fai la domanda: " . $move
+        . ($mode === 'conversazione' && $scenario !== 'libero' ? ' (resta nel personaggio e nella situazione del gioco di ruolo: adatta la mossa a ciò che avviene nella scena)' : '') . ".\n"
+        . "Varietà: non ripetere domande, esempi, frasi fatte o aperture già usati in questa conversazione; non cominciare sempre con le stesse parole (evita di aprire ogni volta con \"¡Qué bien!\" o simili); alterna frasi di tipo diverso.\n";
     $recentErr = [];
     foreach (array_slice($d['errors'], -12) as $e) {
         $recentErr[] = '- ' . ($e['cat'] ?? 'altro') . ': "' . ($e['orig'] ?? '') . '" -> "' . ($e['corr'] ?? '') . '"';
@@ -96,6 +106,7 @@ Regole:
 
 {$modeText}
 
+{$variety}
 Errori recenti dello studente:
 {$errList}
 {$voiceNote}
@@ -138,7 +149,9 @@ TXT;
             return $d;
         });
     }
+    if ($newTopic) sp_remember($user, [$topic]);
     sp_out([
+        'topic' => $topic,
         'reply' => trim((string)$out['reply']), 'corrections' => $corrections,
         'suggestion' => sp_str($out['suggestion'] ?? '', 300), 'vocab' => $vocab, 'stats' => sp_stats($d),
     ]);
@@ -295,9 +308,18 @@ if ($action === 'exercises') {
         . '{"type":"completa","q":"frase con ___ e, tra parentesi, il verbo o la parola base da coniugare/adattare","answer":"forma corretta","alts":["altre forme accettabili"],"why":"..."},'
         . '{"type":"traduci","q":"frase da tradurre in spagnolo, in italiano","ref":"traduzione spagnola di riferimento","why":"punto di grammatica in gioco"}]}'
         . "\nRegole: \"answer\" nei tipi scelta è l'indice (0-3) della risposta corretta: variane la posizione; una sola risposta giusta per gli esercizi di scelta e distrattori plausibili; frasi realistiche e brevi, tutte diverse tra loro; niente doppie soluzioni nei completamenti (se ce ne sono, mettile in alts); 'why' spiega la regola in una frase.";
-    $j = sp_claude_json($system, "Crea $n esercizi: $typeText.\nArgomento: $what", 3500, 100);
-    $items = sp_clean_items(is_array($j['items'] ?? null) ? $j['items'] : [], $kind === 'misti' ? ['scelta', 'completa', 'traduci'] : [$kind], $n);
+    // Varietà: contesti e persone a caso, e le frasi già proposte da non ripetere.
+    $recent = sp_recent($d)['items'];
+    $avoid = array_slice($recent, -40);
+    $seed = "\nContesti da usare, uno per esercizio e variandoli (non limitarti a questi): " . implode('; ', sp_pick_n(sp_contexts(), 5)) . '.'
+          . "\nAlterna i soggetti (" . implode(', ', sp_pick_n(['yo', 'tú', 'él/ella/usted', 'nosotros', 'vosotros', 'ellos/ellas/ustedes'], 4)) . ") e i verbi, evita le frasi sul cinema e sugli amici se non strettamente utili."
+          . ($avoid ? "\nFrasi già proposte di recente: NON ripeterle né riformularle:\n- " . implode("\n- ", $avoid) : '');
+    $extra = $n + 2;
+    $j = sp_claude_json($system, "Crea $extra esercizi: $typeText.\nArgomento: $what" . $seed, 4000, 100);
+    $items = sp_clean_items(is_array($j['items'] ?? null) ? $j['items'] : [], $kind === 'misti' ? ['scelta', 'completa', 'traduci'] : [$kind], $extra);
+    $items = array_slice(sp_drop_repeats($items, $recent), 0, $n);
     if (count($items) < 3) sp_fail(502, 'Esercizi non utilizzabili, riprova.');
+    sp_remember($user, [], array_map(function ($i) { return $i['q']; }, $items));
     sp_out(['items' => $items, 'topic' => $topicId, 'label' => $label]);
 }
 
@@ -451,9 +473,15 @@ if ($action === 'test') {
     $system = SP_BASE_RULES . "\nCrea un test di livello per uno studente italiano che punta al B1. Forma: "
         . '{"items":[{"type":"scelta","section":"tempi|forme|lessico|comprensione","level":"A2|B1|B2","q":"domanda o frase con ___","text":"(solo per comprensione) breve testo spagnolo di 2-3 frasi","options":["a","b","c","d"],"answer":0,"why":"spiegazione in italiano"}]}'
         . "\nRegole: esattamente 20 domande a scelta multipla, 5 per sezione: tempi (tempi e modi verbali: presente, passati, futuro, condizionale, subjuntivo, imperativo), forme (pronomi, preposizioni, por/para, ser/estar, articoli, accordo, connettori), lessico (vocabolario e falsi amici), comprensione (testo breve + domanda in italiano o spagnolo semplice). Livelli: circa 5 A2, 11 B1, 4 B2. Una sola risposta giusta, distrattori plausibili; 'answer' è l'indice 0-3 e la sua posizione va variata. Ordina dal più facile al più difficile all'interno di ogni sezione.";
-    $j = sp_claude_json($system, 'Crea il test.', 6000, 150);
+    $d = sp_load($user);
+    $recent = sp_recent($d)['items'];
+    $seed = "\nContesti per le frasi, variandoli: " . implode('; ', sp_pick_n(sp_contexts(), 6)) . '.'
+          . ($recent ? "\nDomande già viste di recente, da non ripetere: " . implode(' | ', array_slice($recent, -25)) : '');
+    $j = sp_claude_json($system, 'Crea il test.' . $seed, 6000, 150);
     $items = sp_clean_items(is_array($j['items'] ?? null) ? $j['items'] : [], ['scelta'], 24);
+    $items = sp_drop_repeats($items, $recent);
     if (count($items) < 12) sp_fail(502, 'Test non utilizzabile, riprova.');
+    sp_remember($user, [], array_map(function ($i) { return $i['q']; }, $items));
     $prompts = sp_writing_prompts();
     sp_out(['items' => $items, 'writing' => $prompts[array_rand($prompts)]]);
 }
