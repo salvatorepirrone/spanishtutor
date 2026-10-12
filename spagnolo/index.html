@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tutor di spagnolo</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23c0392b'/%3E%3Ctext x='32' y='44' font-size='34' text-anchor='middle' fill='%23f6c945' font-family='sans-serif' font-weight='700'%3EÑ%3C/text%3E%3C/svg%3E">
+<style>
+:root{--bg:#f6f4ef;--card:#fff;--text:#1d2630;--muted:#667380;--line:#ddd8cc;--accent:#c0392b;--accent-ink:#fff;--me:#e9eef5;--tutor:#fff;--ok:#2e7d32;--warn:#a15c00;--warnbg:#fff4e0}
+@media (prefers-color-scheme:dark){:root{--bg:#14171b;--card:#1e2328;--text:#e8eaed;--muted:#9aa5b1;--line:#2f363d;--accent:#e0584a;--accent-ink:#fff;--me:#27323f;--tutor:#1e2328;--ok:#6fbf73;--warn:#f0b35a;--warnbg:#33290f}}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{font:16px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--text);display:flex;flex-direction:column}
+header{padding:10px 16px;border-bottom:1px solid var(--line);background:var(--card)}
+.top{display:flex;gap:12px;align-items:baseline;flex-wrap:wrap}
+h1{font-size:18px;margin:0}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-left:auto;font-size:13px;color:var(--muted)}
+.chip b{color:var(--text)}
+.week{font-size:13px;color:var(--muted);margin-top:4px}
+.bar{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+select,button,textarea{font:inherit;color:inherit}
+select{padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--card);max-width:100%}
+button{cursor:pointer;border:1px solid var(--line);background:var(--card);border-radius:8px;padding:6px 10px}
+button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+button[aria-pressed=true]{outline:2px solid var(--accent)}
+button:disabled{opacity:.5;cursor:default}
+main{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px}
+.msg{max-width:min(680px,92%);padding:10px 12px;border-radius:12px;border:1px solid var(--line);white-space:pre-wrap;overflow-wrap:anywhere}
+.msg.me{align-self:flex-end;background:var(--me)}
+.msg.tutor{align-self:flex-start;background:var(--tutor)}
+.msg .tools{margin-top:6px;display:flex;gap:6px}
+.msg .tools button{padding:2px 8px;font-size:13px;color:var(--muted)}
+.fb{align-self:flex-end;max-width:min(680px,92%);background:var(--warnbg);border:1px solid var(--line);border-left:4px solid var(--warn);border-radius:8px;padding:8px 10px;font-size:14px}
+.fb.good{background:transparent;border-left-color:var(--ok);color:var(--ok)}
+.fb .o{text-decoration:line-through;color:var(--muted)}
+.fb .c{font-weight:600}
+.fb .n{color:var(--muted)}
+.fb .cat{font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--warn)}
+.fb .sug{margin-top:4px;font-style:italic}
+.fb .voc{margin-top:4px;color:var(--muted)}
+.sys{align-self:center;color:var(--muted);font-size:13px;text-align:center}
+.err{align-self:center;color:var(--accent);font-size:14px}
+footer{padding:10px 16px calc(10px + env(safe-area-inset-bottom));border-top:1px solid var(--line);background:var(--card)}
+.row{display:flex;gap:8px;align-items:flex-end}
+textarea{flex:1;resize:none;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:var(--bg);min-height:44px;max-height:120px}
+.mic{width:48px;height:48px;border-radius:50%;font-size:20px;padding:0}
+.mic.on{background:var(--accent);color:var(--accent-ink);animation:p 1.2s infinite}
+@keyframes p{50%{box-shadow:0 0 0 8px rgba(192,57,43,.25)}}
+.opts{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;color:var(--muted);margin-top:8px}
+.opts label{display:flex;gap:5px;align-items:center}
+details{margin-top:8px;font-size:14px}
+summary{cursor:pointer;color:var(--muted)}
+.prog ul{margin:6px 0;padding-left:20px}
+</style>
+</head>
+<body>
+<header>
+  <div class="top">
+    <h1>Tutor di spagnolo</h1>
+    <div class="chips">
+      <span class="chip">Al 2 dicembre: <b id="days">–</b> giorni</span>
+      <span class="chip">Serie: <b id="streak">0</b> gg</span>
+      <span class="chip">Oggi: <b id="today">0</b> scambi</span>
+    </div>
+  </div>
+  <div class="week" id="week"></div>
+  <div class="bar">
+    <select id="mode" aria-label="Modalità">
+      <option value="conversazione">Conversazione</option>
+      <option value="quiz">Quiz di grammatica</option>
+      <option value="ripasso">Ripasso dei miei errori</option>
+    </select>
+    <select id="scenario" aria-label="Scenario"></select>
+    <button id="restart" class="primary">Nuova sessione</button>
+  </div>
+</header>
+
+<main id="log" aria-live="polite"></main>
+
+<footer>
+  <div class="row">
+    <button id="mic" class="mic" title="Parla (spagnolo)" aria-label="Parla">🎤</button>
+    <textarea id="box" rows="1" placeholder="Scrivi in spagnolo…" aria-label="Il tuo messaggio"></textarea>
+    <button id="send" class="primary">Invia</button>
+  </div>
+  <div class="opts">
+    <label><input type="checkbox" id="speak" checked> Leggi le risposte ad alta voce</label>
+    <label><input type="checkbox" id="slow"> Voce lenta</label>
+    <label><input type="checkbox" id="hands"> Conversazione a mani libere</label>
+    <span id="voiceNote"></span>
+  </div>
+  <details class="prog"><summary>I miei progressi</summary><div id="prog"></div></details>
+</footer>
+
+<script>
+(function () {
+  'use strict';
+  var API = 'api.php';
+  var $ = function (id) { return document.getElementById(id); };
+  var log = $('log'), box = $('box');
+  var history = [];           // {role:'user'|'assistant', text}
+  var busy = false, listening = false, lastVoice = false;
+  var state = null;
+
+  // ---- Preferenze (solo comodità: se localStorage non c'è, niente di grave)
+  function pref(k, v) {
+    try { if (v === undefined) return localStorage.getItem('sp_' + k); localStorage.setItem('sp_' + k, v); } catch (e) {}
+    return null;
+  }
+  ['speak', 'slow', 'hands'].forEach(function (k) {
+    var el = $(k), s = pref(k);
+    if (s !== null) el.checked = s === '1';
+    el.addEventListener('change', function () { pref(k, el.checked ? '1' : '0'); if (k === 'hands' && el.checked) $('speak').checked = true; });
+  });
+  ['mode', 'scenario'].forEach(function (k) { var s = pref(k); if (s) $(k).value = s; });
+
+  // ---- Interfaccia
+  function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; }
+  function scroll() { log.scrollTop = log.scrollHeight; }
+  function sys(text, cls) { log.appendChild(el('div', cls || 'sys', text)); scroll(); }
+
+  function addMsg(role, text) {
+    var m = el('div', 'msg ' + (role === 'user' ? 'me' : 'tutor'), text);
+    if (role !== 'user') {
+      var t = el('div', 'tools'), b = el('button', '', '🔊 Riascolta');
+      b.addEventListener('click', function () { say(text); });
+      t.appendChild(b); m.appendChild(t);
+    }
+    log.appendChild(m); scroll();
+  }
+
+  function addFeedback(r) {
+    var cs = r.corrections || [];
+    if (!cs.length) {
+      log.appendChild(el('div', 'fb good', '✓ Frase corretta.'));
+    }
+    cs.forEach(function (c) {
+      var d = el('div', 'fb');
+      d.appendChild(el('div', 'cat', c.cat));
+      var l = el('div');
+      l.appendChild(el('span', 'o', c.original)); l.appendChild(document.createTextNode(' → ')); l.appendChild(el('span', 'c', c.corrected));
+      d.appendChild(l);
+      if (c.note) d.appendChild(el('div', 'n', c.note));
+      log.appendChild(d);
+    });
+    var last = log.lastChild;
+    if (last && (r.suggestion || (r.vocab && r.vocab.length))) {
+      var d2 = last.classList.contains('fb') ? last : null;
+      if (!d2) { d2 = el('div', 'fb good'); log.appendChild(d2); }
+      if (r.suggestion) d2.appendChild(el('div', 'sug', 'Potresti dire: ' + r.suggestion));
+      if (r.vocab && r.vocab.length) d2.appendChild(el('div', 'voc', 'Parole utili: ' + r.vocab.map(function (v) { return v.es + ' = ' + v.it; }).join(' · ')));
+    }
+    scroll();
+  }
+
+  function renderState(s) {
+    if (!s) return;
+    $('days').textContent = s.daysLeft;
+    $('streak').textContent = s.streak;
+    $('today').textContent = s.todayTurns;
+    var p = $('prog'); p.textContent = '';
+    p.appendChild(el('div', '', 'Giorni di pratica: ' + s.totalDays + ' · Parole salvate: ' + s.vocabCount));
+    var keys = Object.keys(s.topErrors || {});
+    if (keys.length) {
+      p.appendChild(el('div', '', 'Errori più frequenti (ultime correzioni):'));
+      var ul = el('ul'); keys.forEach(function (k) { ul.appendChild(el('li', '', k + ': ' + s.topErrors[k])); }); p.appendChild(ul);
+    }
+    if (s.recentVocab && s.recentVocab.length) {
+      p.appendChild(el('div', '', 'Ultime parole:'));
+      var ul2 = el('ul'); s.recentVocab.forEach(function (v) { ul2.appendChild(el('li', '', v.es + ' = ' + v.it)); }); p.appendChild(ul2);
+    }
+  }
+
+  // ---- Sintesi vocale
+  var voices = [];
+  function loadVoices() { voices = (window.speechSynthesis ? speechSynthesis.getVoices() : []).filter(function (v) { return /^es/i.test(v.lang); }); }
+  if (window.speechSynthesis) { loadVoices(); speechSynthesis.onvoiceschanged = loadVoices; }
+  function pickVoice() {
+    return voices.filter(function (v) { return /es[-_]ES/i.test(v.lang); })[0] || voices[0] || null;
+  }
+  function say(text, then) {
+    if (!window.speechSynthesis) { if (then) then(); return; }
+    speechSynthesis.cancel();
+    var u = new SpeechSynthesisUtterance(text);
+    u.lang = 'es-ES'; u.rate = $('slow').checked ? 0.75 : 0.95;
+    var v = pickVoice(); if (v) u.voice = v;
+    u.onend = u.onerror = function () { if (then) then(); };
+    speechSynthesis.speak(u);
+  }
+
+  // ---- Riconoscimento vocale
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition, rec = null;
+  var secure = window.isSecureContext;
+  if (!SR) {
+    $('mic').disabled = true; $('hands').disabled = true;
+    $('voiceNote').textContent = 'Il microfono non è supportato da questo browser: usa Chrome, Edge o Safari.';
+  } else if (!secure) {
+    $('mic').disabled = true; $('hands').disabled = true;
+    $('voiceNote').textContent = 'Il microfono funziona solo su https: apri il sito da QuickConnect.';
+  }
+
+  function stopListening() { if (rec) { try { rec.abort(); } catch (e) {} } listening = false; $('mic').classList.remove('on'); }
+
+  function startListening() {
+    if (!SR || !secure || busy || listening) return;
+    if (window.speechSynthesis) speechSynthesis.cancel();
+    rec = new SR();
+    rec.lang = 'es-ES'; rec.interimResults = true; rec.continuous = false; rec.maxAlternatives = 1;
+    var finalText = '';
+    rec.onstart = function () { listening = true; $('mic').classList.add('on'); };
+    rec.onresult = function (e) {
+      var interim = '';
+      for (var i = e.resultIndex; i < e.results.length; i++) {
+        if (e.results[i].isFinal) finalText += e.results[i][0].transcript; else interim += e.results[i][0].transcript;
+      }
+      box.value = (finalText + ' ' + interim).trim();
+    };
+    rec.onerror = function (e) {
+      listening = false; $('mic').classList.remove('on');
+      if (e.error === 'not-allowed' || e.error === 'service-not-allowed') { sys('Permesso al microfono negato: abilitalo nelle impostazioni del sito.', 'err'); $('hands').checked = false; }
+      else if (e.error === 'network') sys('Il riconoscimento vocale richiede connessione a internet.', 'err');
+      else if (e.error === 'no-speech' && $('hands').checked) setTimeout(startListening, 300);
+    };
+    rec.onend = function () {
+      listening = false; $('mic').classList.remove('on');
+      var t = (finalText || box.value).trim();
+      if (t) { lastVoice = true; send(); }
+    };
+    try { rec.start(); } catch (e) {}
+  }
+  $('mic').addEventListener('click', function () { if (listening) { try { rec.stop(); } catch (e) {} } else startListening(); });
+
+  // ---- Conversazione
+  function send(opts) {
+    opts = opts || {};
+    if (busy) return;
+    var text = box.value.trim();
+    if (!text && !opts.start) return;
+    var voice = lastVoice; lastVoice = false;
+    if (text) { history.push({ role: 'user', text: text }); addMsg('user', text); box.value = ''; box.style.height = ''; }
+    busy = true; $('send').disabled = true;
+    var wait = el('div', 'sys', '…'); log.appendChild(wait); scroll();
+    fetch(API, {
+      method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages: history, mode: $('mode').value, scenario: $('scenario').value, voice: voice })
+    }).then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.error || ('Errore ' + r.status)); return j; }); })
+      .then(function (r) {
+        wait.remove();
+        if (text) addFeedback(r);
+        history.push({ role: 'assistant', text: r.reply });
+        addMsg('tutor', r.reply);
+        renderState(r.stats);
+        var after = function () { if ($('hands').checked) setTimeout(startListening, 250); };
+        if ($('speak').checked) say(r.reply, after); else after();
+      })
+      .catch(function (e) { wait.remove(); sys(e.message || 'Errore di rete', 'err'); if (text) { history.pop(); var mine = log.querySelectorAll('.msg.me'); if (mine.length) mine[mine.length - 1].remove(); box.value = text; } })
+      .then(function () { busy = false; $('send').disabled = false; });
+  }
+
+  function restart() {
+    stopListening(); if (window.speechSynthesis) speechSynthesis.cancel();
+    history = []; log.textContent = '';
+    pref('mode', $('mode').value); pref('scenario', $('scenario').value);
+    send({ start: true });
+  }
+
+  $('send').addEventListener('click', function () { send(); });
+  box.addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } });
+  box.addEventListener('input', function () { box.style.height = 'auto'; box.style.height = Math.min(box.scrollHeight, 120) + 'px'; });
+  $('restart').addEventListener('click', restart);
+  $('mode').addEventListener('change', function () { $('scenario').disabled = $('mode').value !== 'conversazione'; });
+
+  // ---- Avvio
+  fetch(API, { credentials: 'same-origin' }).then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.error || 'Errore ' + r.status); return j; }); })
+    .then(function (s) {
+      state = s;
+      var sc = $('scenario'); sc.textContent = '';
+      s.scenarios.forEach(function (x) { var o = el('option', '', x.label); o.value = x.id; sc.appendChild(o); });
+      var saved = pref('scenario'); if (saved) sc.value = saved;
+      $('scenario').disabled = $('mode').value !== 'conversazione';
+      var w = s.plan[s.week];
+      $('week').textContent = 'Settimana ' + (s.week + 1) + ' di ' + s.plan.length + ' · ' + w.title + ' — ' + w.focus;
+      renderState(s.stats);
+      sys('Premi 🎤 per parlare o scrivi. Ti correggo dopo ogni frase.');
+      restart();
+    })
+    .catch(function (e) { sys('Impossibile caricare il tutor: ' + e.message, 'err'); });
+})();
+</script>
+</body>
+</html>
