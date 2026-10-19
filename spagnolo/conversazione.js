@@ -211,7 +211,22 @@
       .then(function () { busy = false; ui.send.disabled = ui.hint.disabled = false; });
   }
 
+  // Schermata iniziale: la conversazione non parte da sola, la avvii tu.
+  function showIntro() {
+    SP.clear(ui.log);
+    var c = el('div', 'card');
+    c.style.alignSelf = 'center'; c.style.maxWidth = '520px'; c.style.textAlign = 'center';
+    c.appendChild(el('h3', '', 'Pronto a parlare?'));
+    c.appendChild(el('p', 'muted', 'Scegli sopra la modalità e, se vuoi, lo scenario. Poi premi Inizia: il tutor ti fa la prima domanda. Puoi rispondere con il microfono o scrivendo, e dopo ogni frase ti correggo.'));
+    var b = el('button', 'primary', 'Inizia la conversazione');
+    b.addEventListener('click', restart);
+    c.appendChild(b);
+    ui.log.appendChild(c);
+    ui.restartBtn.textContent = 'Inizia';
+  }
+
   function restart() {
+    ui.restartBtn.textContent = 'Nuova sessione';
     stopListening(false); SP.stopSpeaking();
     history = []; topic = ''; SP.clear(ui.log);
     SP.pref('mode', ui.mode.value); SP.pref('scenario', ui.scenario.value);
@@ -228,7 +243,7 @@
     });
     ui.scenario = el('select'); ui.scenario.setAttribute('aria-label', 'Scenario');
     SP.catalog.scenarios.forEach(function (s) { var op = el('option', '', s.label); op.value = s.id; ui.scenario.appendChild(op); });
-    var restartBtn = el('button', 'primary', 'Nuova sessione');
+    var restartBtn = el('button', 'primary', 'Inizia'); ui.restartBtn = restartBtn;
     bar.appendChild(ui.mode); bar.appendChild(ui.scenario); bar.appendChild(restartBtn);
     var m = SP.pref('mode'), s = SP.pref('scenario');
     if (m) ui.mode.value = m;
@@ -277,7 +292,7 @@
       var fresh = !ui;
       if (fresh) build();
       ui.parts.forEach(function (p) { root.appendChild(p); });
-      if (fresh) restart(); else scrollDown();
+      if (fresh) showIntro(); else scrollDown();
     },
     unmount: function () { stopListening(false); }
   };

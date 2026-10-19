@@ -115,16 +115,31 @@ var SP = (function () {
   };
 
   // ---- Confronto tra risposte: ignora maiuscole e spazi; gli accenti mancanti sono "quasi giusti".
-  function norm(s) { return String(s).toLowerCase().replace(/[.,;:!?¡¿"'«»()]/g, '').replace(/\s+/g, ' ').trim(); }
-  function strip(s) { return norm(s).normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/ñ/g, 'n'); }
+  // Confronto tra la risposta data e quella attesa: ignora maiuscole, spazi (anche all'inizio, alla fine, doppi o
+  // "strani" come lo spazio non separabile o i caratteri invisibili di alcune tastiere), punteggiatura e la forma
+  // degli accenti (e + accento combinato = é).
+  function norm(s) {
+    return String(s).normalize('NFC').toLowerCase()
+      .replace(/[\u200b-\u200d\u2060\u00ad\ufeff]/g, '')
+      .replace(/[.,;:!?¡¿"'“”‘’«»()…–—]/g, '')
+      .replace(/\s+/g, ' ').trim();
+  }
+  function strip(s) { return norm(s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/ñ/g, 'n'); }
+  // Chi risponde spesso scrive anche il soggetto ("yo fui"): lo si accetta se la risposta attesa non lo contiene.
+  function withoutSubject(s) { return s.replace(/^(yo|tú|usted|nosotros|nosotras|vosotros|vosotras|ellos|ellas|ustedes|ella)\s+/, ''); }
   // Ritorna 'ok', 'accent' (giusta ma senza accenti/ñ) oppure 'no'.
   sp.compare = function (given, answer, alts) {
     var all = [answer].concat(alts || []);
-    var g = norm(given);
-    if (!g) return 'no';
-    for (var i = 0; i < all.length; i++) if (norm(all[i]) === g) return 'ok';
-    var gs = strip(given);
-    for (var j = 0; j < all.length; j++) if (strip(all[j]) === gs) return 'accent';
+    var cands = [norm(given)];
+    var ws = withoutSubject(cands[0]);
+    if (ws && ws !== cands[0]) cands.push(ws);
+    if (!cands[0]) return 'no';
+    var i, j, c;
+    for (c = 0; c < cands.length; c++) for (i = 0; i < all.length; i++) if (norm(all[i]) === cands[c]) return 'ok';
+    for (c = 0; c < cands.length; c++) {
+      var gs = strip(cands[c]);
+      for (j = 0; j < all.length; j++) if (strip(all[j]) === gs) return 'accent';
+    }
     return 'no';
   };
 
@@ -158,6 +173,11 @@ var SP = (function () {
         sp.renderWeek();
         // Al primo accesso si propone il test di livello, da cui dipende il piano.
         if (c.needsPlacement && (!location.hash || location.hash === '#/home' || location.hash === '#/')) location.hash = '#/benvenuto';
+        // Aprendo il sito (indirizzo digitato, segnalibro, link) si parte dalla home, anche se il segnalibro porta a una sezione.
+        var navEntry = (performance.getEntriesByType && performance.getEntriesByType('navigation')[0]) || {};
+        if (navEntry.type === 'navigate' && location.hash && location.hash !== '#/home' && location.hash !== '#/benvenuto') {
+          history.replaceState(null, '', location.pathname + location.search + '#/home');
+        }
         window.addEventListener('hashchange', route);
         route();
       })
