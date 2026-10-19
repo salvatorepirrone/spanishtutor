@@ -1,50 +1,79 @@
 # Tutor di spagnolo
 
-App web per esercitare lo spagnolo (livello A2-B1): conversazione scritta e a voce con correzioni, esercizi,
-grammatica, vocabolario con ripasso a intervalli e test di livello. Pensata per Web Station di un NAS Synology
-(nginx + PHP 7.4). Usa l'API di Claude lato server: nessuna chiave nel browser né nel repository.
+App web per esercitare lo spagnolo (livello A2-B2): conversazione scritta e a voce con correzioni e suggerimenti,
+esercizi sempre diversi, grammatica, vocabolario con ripasso a intervalli, coniugazione dei verbi e test di livello.
+Il tutor è Claude, chiamato solo dal server: nessuna chiave nel browser né in questo repository.
 
 ## Sezioni
 
 | Sezione | Cosa fa |
 | --- | --- |
+| Home | Descrizione, numeri del giorno, piano della settimana, accesso rapido alle funzioni |
 | Conversazione | Dialogo con il tutor (testo e voce), correzione dopo ogni frase, suggerimenti in spagnolo (💡) |
 | Esercizi | Serie generate per argomento: scelta multipla, completa, traduci |
 | Grammatica | 44 argomenti in 7 sezioni, lezioni generate una volta e conservate |
 | Vocabolario | 16 temi, mazzo personale e flashcard con ripasso a intervalli |
+| Verbi | Coniugazione con le forme irregolari evidenziate (motore a regole, circa 270 verbi) e allenamento |
 | Test | 20 domande + testo scritto, stima del livello e progressi |
 
-## Installazione sul NAS
+Al primo accesso c'è un test di ingresso (o la scelta del livello) e il tutor prepara un piano di 8 settimane.
 
-1. Copiare la cartella `spagnolo/` in `/volume2/web/`.
-2. La chiave API di Claude sta fuori dal sito, in `/volume2/web/auth-data/anthropic.key` (una riga, mai nel repo).
-3. Far gestire `/spagnolo/` al tutor: in cima a `auth/gate.php` del sito, prima di qualsiasi `require`, c'è questo blocco
-   (se il gate viene sostituito da un deploy del sito, va rimesso):
+## Struttura del repository
 
-```php
-$__sp = '/' . ltrim(rawurldecode(parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/'), '/');
-if ($__sp === '/spagnolo' || strpos($__sp, '/spagnolo/') === 0) {
-    require __DIR__ . '/../spagnolo/entry.php';
-    exit;
-}
-unset($__sp);
+```
+public/            sito statico (pagine, script, stile, pagine di accesso)
+netlify/functions/ funzione /api (entrata)
+netlify/lib/       logica del backend: accessi, azioni, router, dati statici
+netlify/test/      prove della logica (archivio in memoria, Claude simulato)
+netlify.toml       configurazione del sito
+spagnolo/          versione precedente per NAS Synology (PHP): non più sviluppata
 ```
 
-## Accessi (autonomi dal resto del sito)
+## Pubblicare su Netlify (da GitHub)
 
-Utenti, sessioni, inviti e limiti stanno in `/volume2/web/auth-data/spagnolo/` (chiuso al web).
+1. Su Netlify: **Add new project → Import an existing project → GitHub** e scegli questo repository.
+   Le impostazioni di build vengono da `netlify.toml` (cartella pubblicata `public`, funzioni in `netlify/functions`).
+2. In **Project configuration → Environment variables** crea queste variabili (ambito: Functions):
 
-- Accesso solo su invito: l'admin crea un link a uso singolo (7 giorni) e la persona sceglie la password.
-- Ruoli: `admin` (pagina `/spagnolo/admin.php`), `user`, `guest` (limite di richieste più basso).
+   | Variabile | Valore |
+   | --- | --- |
+   | `ANTHROPIC_API_KEY` | la chiave API di Claude |
+   | `SESSION_SECRET` | una stringa casuale lunga (almeno 32 caratteri), per firmare le sessioni |
+   | `SETUP_TOKEN` | una parola d'ordine a tua scelta, serve solo per creare il primo amministratore |
+   | `PUBLIC_URL` | (facoltativa) indirizzo del sito, per i link di invito; se manca si usa quello della richiesta |
+
+   Per generare `SESSION_SECRET` da PowerShell: `-join ((48..57)+(97..122) | Get-Random -Count 48 | % {[char]$_})`
+3. Rilancia il deploy (**Deploys → Trigger deploy**) perché le variabili valgano.
+4. Apri `https://<sito>.netlify.app/setup.html`, inserisci un nome utente e il `SETUP_TOKEN`: ottieni un link a uso
+   singolo per scegliere la password dell'amministratore. Dopo il primo amministratore la pagina non funziona più;
+   a quel punto si può togliere `SETUP_TOKEN`.
+
+Da lì, `/admin.html` permette di invitare altre persone.
+
+## Accessi
+
+- Solo su invito: l'admin crea un link a uso singolo (7 giorni) e la persona sceglie la password.
+- Ruoli `admin`, `user`, `guest` (limite di richieste più basso).
 - Limite giornaliero di richieste a Claude per persona (predefinito 150, guest 30), per proteggere la chiave API.
 - Blocco dopo 5 password errate e tetto di tentativi per indirizzo IP; sessioni invalidate al cambio password.
+- Sessione con cookie firmato (HttpOnly, Secure, SameSite=Lax); le richieste che modificano dati richiedono
+  un'intestazione che un altro sito non può aggiungere.
 
-Primo amministratore, dal NAS (via SSH):
+Utenti, progressi e lezioni stanno in **Netlify Blobs** (archivio chiave/valore del sito, nessuna configurazione).
 
-```sh
-/usr/local/bin/php74 /volume2/web/spagnolo/cli.php invite <utente> admin    # stampa il link di invito
-/usr/local/bin/php74 /volume2/web/spagnolo/cli.php set-password <utente>    # in alternativa: la password si digita nel terminale
-/usr/local/bin/php74 /volume2/web/spagnolo/cli.php list
+## Prove
+
+La logica del backend si prova senza Netlify (archivio in memoria, Claude simulato). Servendo il repository con
+un server statico, da una pagina del browser:
+
+```js
+const m = await import('/netlify/test/backend.test.mjs');
+console.log(await m.run());   // { failures: 0, total: 69, ... }
 ```
 
-La password non si passa mai come argomento e non va mai scritta nel repository.
+## Limiti da conoscere
+
+- Le funzioni sincrone di Netlify durano al massimo 60 secondi; le chiamate più lente (test, liste di vocabolario,
+  lezioni) ne usano 15-50 alla prima generazione, poi il risultato resta in cache.
+- Lezioni, liste di vocabolario ed esercizi sono generati da Claude e non sono riletti da un insegnante.
+- Il microfono richiede Chrome, Edge o Safari e una connessione a internet.

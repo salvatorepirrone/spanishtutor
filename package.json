@@ -1,0 +1,11 @@
+{
+  "name": "spanishtutor",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Tutor di spagnolo: frontend statico e API su Netlify Functions",
+  "type": "module",
+  "engines": { "node": ">=22.12" },
+  "dependencies": {
+    "@netlify/blobs": "^11.1.4"
+  }
+}
