@@ -92,6 +92,41 @@ function demoWords(userText) {
 }
 
 // Claude simulato: risponde in base a ciò che chiede il prompt di sistema. Con opts.realVocab le liste di vocabolario hanno parole vere.
+// Italiano di prova per il tutor simulato (solo verbi regolari: il vero tutor coniuga anche gli irregolari).
+const IT_PRON = ['io', 'tu', 'lui/lei', 'noi', 'voi', 'loro'];
+const IT_PERSON = { yo: 0, eu: 0, 'tú': 1, tu: 1, 'él': 2, ele: 2, 'você': 2, usted: 2, nosotros: 3, 'nós': 3, vosotros: 4, ellos: 5, eles: 5, ustedes: 5, 'vocês': 5 };
+export function fakeItalian(gloss, tenseIt, persons) {
+  const inf = String(gloss).split(/[,;]/).map((x) => x.trim()).find((x) => /(are|ere|ire)$/.test(x)) || String(gloss).split(/[,;]/)[0].trim();
+  const m = inf.match(/^(.*)(are|ere|ire)$/);
+  if (!m) return persons.map((p) => IT_PRON[IT_PERSON[p.split(/\s/)[0].toLowerCase()] || 0] + ' ' + inf);
+  const st = m[1], c = m[2], k = c === 'are' ? 0 : c === 'ere' ? 1 : 2, t = String(tenseIt);
+  const part = st + ['ato', 'uto', 'ito'][k];
+  const avere = ['ho', 'hai', 'ha', 'abbiamo', 'avete', 'hanno'], avevo = ['avevo', 'avevi', 'aveva', 'avevamo', 'avevate', 'avevano'];
+  const fut = st + (k === 2 ? 'ir' : 'er');
+  const T = {
+    presente: [['o', 'i', 'a', 'iamo', 'ate', 'ano'], ['o', 'i', 'e', 'iamo', 'ete', 'ono'], ['o', 'i', 'e', 'iamo', 'ite', 'ono']][k].map((e) => st + e),
+    remoto: [['ai', 'asti', 'ò', 'ammo', 'aste', 'arono'], ['ei', 'esti', 'é', 'emmo', 'este', 'erono'], ['ii', 'isti', 'ì', 'immo', 'iste', 'irono']][k].map((e) => st + e),
+    imperfetto: ['avo', 'avi', 'ava', 'avamo', 'avate', 'avano'].map((e) => st + ['a', 'e', 'i'][k] + e.slice(1)),
+    futuro: ['ò', 'ai', 'à', 'emo', 'ete', 'anno'].map((e) => fut + e),
+    condizionale: ['ei', 'esti', 'ebbe', 'emmo', 'este', 'ebbero'].map((e) => fut + e),
+    prossimo: avere.map((a) => a + ' ' + part),
+    trapassato: avevo.map((a) => a + ' ' + part),
+    congPres: [['i', 'i', 'i', 'iamo', 'iate', 'ino'], ['a', 'a', 'a', 'iamo', 'iate', 'ano'], ['a', 'a', 'a', 'iamo', 'iate', 'ano']][k].map((e) => st + e),
+    congImp: ['ssi', 'ssi', 'sse', 'ssimo', 'ste', 'ssero'].map((e) => st + ['a', 'e', 'i'][k] + e),
+  };
+  const imp = [null, [['a', 'i', 'iamo', 'ate', 'ino'], ['i', 'a', 'iamo', 'ete', 'ano'], ['i', 'a', 'iamo', 'ite', 'ano']][k].map((e) => st + e)];
+  const which = /remoto/.test(t) ? 'remoto' : /imperfetto/.test(t) && /congiuntivo/.test(t) ? 'congImp' : /congiuntivo/.test(t) ? 'congPres' : /trapassato/.test(t) ? 'trapassato'
+    : /prossimo|azione ripetuta/.test(t) ? 'prossimo' : /imperfetto/.test(t) ? 'imperfetto' : /futuro/.test(t) ? 'futuro' : /condizionale/.test(t) ? 'condizionale' : /imperativo/.test(t) ? 'imp' : 'presente';
+  return persons.map((p, i) => {
+    const idx = IT_PERSON[p.split(/\s/)[0].toLowerCase()] ?? i;
+    if (which === 'imp') {
+      const f = imp[1][Math.max(0, idx - 1)] || inf;
+      return (/negativo/.test(t) ? 'non ' + (idx === 1 ? inf : f) : f);
+    }
+    return (/congiuntivo/.test(t) ? 'che ' : '') + IT_PRON[idx] + ' ' + T[which][idx];
+  });
+}
+
 export function fakeClaude(counter, opts = {}) {
   return async (url, init) => {
     counter.n++;
@@ -119,7 +154,7 @@ export function fakeClaude(counter, opts = {}) {
       ] };
     } else if (sys.includes('Valuta traduzioni')) payload = { results: JSON.parse(b.messages[0].content).map((x, i) => ({ ok: i === 0, score: i === 1 ? 0.7 : undefined, corrected: x.ref, note: 'nota' })) };
     else if (sys.includes('forme coniugate del verbo')) {
-      payload = { results: JSON.parse(b.messages[0].content).map((x) => ({ i: x.i, forms: x.persons.map((p) => p + ' ' + x.inf + ' (it)') })) };
+      payload = { results: JSON.parse(b.messages[0].content).map((x) => ({ i: x.i, forms: fakeItalian(x.it, x.tenseIt, x.persons) })) };
     }
     else if (sys.includes('ha cercato un verbo')) {
       const w = b.messages[0].content.replace('Parola cercata: ', '');
@@ -306,7 +341,7 @@ export async function run({ iterations = 1000 } = {}) {
   ok(r.status === 200 && r.json.exists && !r.json.regular, 'verb_check: verbo esistente ma irregolare');
   const vp = [{ inf: 'caber', tense: 'indefinido', tenseIt: 'passato remoto', it: 'starci', persons: ['yo', 'tú', 'él', 'nosotros', 'vosotros', 'ellos'] }];
   r = await call('POST', '/api', { cookie: S, body: { action: 'verb_italian', pairs: vp } });
-  ok(r.status === 200 && r.json.items[0].forms.length === 6 && r.json.items[0].forms[1].includes('(it)'), 'verb_italian: forme italiane per tutte le persone', JSON.stringify(r.json));
+  ok(r.status === 200 && r.json.items[0].forms.length === 6 && r.json.items[0].forms[1].startsWith('tu '), 'verb_italian: forme italiane per tutte le persone', JSON.stringify(r.json));
   const before2 = counter.n;
   r = await call('POST', '/api', { cookie: S, body: { action: 'verb_italian', pairs: vp } });
   ok(r.status === 200 && r.json.items[0].forms.length === 6 && counter.n === before2, 'verb_italian: la seconda richiesta viene dalla cache');
