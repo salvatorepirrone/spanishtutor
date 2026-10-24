@@ -156,10 +156,11 @@ export function addErrors(d, errors, now = new Date()) {
   return d;
 }
 
-export function deckAdd(d, es, it, ex, theme, now = new Date()) {
+export function deckAdd(d, es, it, ex, theme, now = new Date(), syn = []) {
   const key = es.toLowerCase();
   if (!key || !it || d.deck[key]) return d;
   d.deck[key] = { es, it, ex, theme, box: 0, due: today(now), seen: 0 };
+  if (Array.isArray(syn) && syn.length) d.deck[key].syn = syn.slice(0, 4);
   const keys = Object.keys(d.deck);
   if (keys.length > 1500) delete d.deck[keys[0]];
   return d;

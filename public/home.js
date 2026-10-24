@@ -7,7 +7,7 @@
     { to: 'conversazione', icon: '💬', title: 'Conversazione', text: 'Parla o scrivi con il tutor: domande, giochi di ruolo e correzioni dopo ogni frase.' },
     { to: 'esercizi', icon: '✏️', title: 'Esercizi', text: 'Serie nuove ogni volta: scelta multipla, completamenti e traduzioni sugli argomenti che scegli.' },
     { to: 'grammatica', icon: '📖', title: 'Grammatica', text: 'Pronomi, avverbi, tempi verbali e altro: spiegazioni chiare con tabelle ed esempi.' },
-    { to: 'vocabolario', icon: '🗂️', title: 'Vocabolario', text: 'Liste per tema e flashcard con ripasso a intervalli, per ricordare davvero le parole.' },
+    { to: 'vocabolario', icon: '🗂️', title: 'Vocabolario', text: 'Liste per tema e test di scrittura: scrivi la parola e anche i sinonimi valgono. Ripasso a intervalli.' },
     { to: 'verbi', icon: '🔁', title: 'Verbi', text: 'Coniuga qualsiasi verbo: le forme irregolari sono evidenziate. Poi allenati a scriverle.' },
     { to: 'test', icon: '🎯', title: 'Test', text: 'Verifica il livello con 20 domande e un testo scritto, e guarda i progressi nel tempo.' }
   ];

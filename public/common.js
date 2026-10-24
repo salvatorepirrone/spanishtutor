@@ -130,11 +130,24 @@ var SP = (function () {
   // Chi risponde spesso scrive anche il soggetto ("yo fui"): lo si accetta se la risposta attesa non lo contiene.
   function withoutSubject(s) { return s.replace(/^(yo|tú|usted|nosotros|nosotras|vosotros|vosotras|ellos|ellas|ustedes|ella)\s+/, ''); }
   // Ritorna 'ok', 'accent' (giusta ma senza accenti/ñ) oppure 'no'.
-  sp.compare = function (given, answer, alts) {
+  // Con opts.articles (test di vocabolario) l'articolo si può omettere ("aguacate" per "el aguacate") e una risposta attesa
+  // può avere varianti separate da "/", "," o ";" e commenti tra parentesi ("ganar (ue)").
+  function noArticle(s) { return s.replace(/^(el|la|los|las|un|una|unos|unas)\s+/, ''); }
+  function variants(s) {
+    var base = String(s).replace(/\([^)]*\)/g, ' ').split(/[\/,;]/), out = [String(s)];
+    base.forEach(function (x) { x = x.trim(); if (x) { out.push(x); out.push(noArticle(norm(x))); } });
+    return out;
+  }
+  sp.compare = function (given, answer, alts, opts) {
     var all = [answer].concat(alts || []);
     var cands = [norm(given)];
     var ws = withoutSubject(cands[0]);
     if (ws && ws !== cands[0]) cands.push(ws);
+    if (opts && opts.articles) {
+      var na = noArticle(cands[0]);
+      if (na && na !== cands[0]) cands.push(na);
+      all = all.reduce(function (acc, x) { return acc.concat(variants(x)); }, []);
+    }
     if (!cands[0]) return 'no';
     var i, j, c;
     for (c = 0; c < cands.length; c++) for (i = 0; i < all.length; i++) if (norm(all[i]) === cands[c]) return 'ok';

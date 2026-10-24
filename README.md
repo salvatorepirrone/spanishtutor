@@ -12,7 +12,7 @@ Il tutor è Claude, chiamato solo dal server: nessuna chiave nel browser né in 
 | Conversazione | Dialogo con il tutor (testo e voce), correzione dopo ogni frase, suggerimenti in spagnolo (💡) |
 | Esercizi | Serie generate per argomento: scelta multipla, completa, traduci |
 | Grammatica | 44 argomenti in 7 sezioni, lezioni generate una volta e conservate |
-| Vocabolario | 16 temi, mazzo personale e flashcard con ripasso a intervalli |
+| Vocabolario | 16 temi con liste di parole e **test di scrittura** (si legge il significato e si scrive la parola; i sinonimi valgono), mazzo personale con ripasso a intervalli |
 | Verbi | Coniugazione con le forme irregolari evidenziate (motore a regole, circa 270 verbi) e allenamento |
 | Test | 20 domande + testo scritto, stima del livello e progressi |
 
@@ -49,6 +49,31 @@ spagnolo/          versione precedente per NAS Synology (PHP): non più sviluppa
    a quel punto si può togliere `SETUP_TOKEN`.
 
 Da lì, `/admin.html` permette di invitare altre persone.
+
+## Provare in locale, senza deploy
+
+**1. Demo immediata (nessuna installazione, serve solo Python).** Da un terminale nella cartella del progetto:
+
+```sh
+py tools/demo.py
+```
+
+Si apre `http://127.0.0.1:18080/` con il backend vero eseguito nel browser e un **Claude simulato**: le risposte del
+tutor, gli esercizi, le liste di vocabolario e la correzione dei sinonimi sono di prova (nel test di vocabolario viene
+accettata come sinonimo una risposta che comincia per «sin»), ma si possono percorrere tutte le schermate. Sei già
+dentro come utente `demo`; i dati restano nella sessione del browser.
+
+**2. Prova con il vero Claude (`netlify dev`).** Serve Node.js 22 o più recente (`winget install OpenJS.NodeJS.LTS`).
+Copia `.env.example` in `.env` e compila le tre variabili (il file è ignorato da git), poi:
+
+```sh
+npm install
+npx netlify-cli dev
+```
+
+Il sito gira su `http://localhost:8888` con funzione `/api` e archivio Blobs locali (separati da quelli online) e non
+consuma crediti di deploy. Per il primo accesso apri `/setup.html` con il tuo `SETUP_TOKEN`. Le richieste a Claude
+usano la tua chiave e vengono contate come tutte le altre.
 
 ## Accessi
 

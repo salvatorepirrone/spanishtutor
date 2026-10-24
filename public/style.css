@@ -140,6 +140,7 @@ input[type=checkbox]{accent-color:var(--accent);width:16px;height:16px}
 .verdict{margin-top:10px;font-size:14px;padding:8px 12px;border-radius:12px;border-left:4px solid}
 .verdict.ok{background:var(--okbg);color:var(--ok);border-color:var(--ok)}
 .verdict.ko{background:var(--badbg);color:var(--bad);border-color:var(--bad)}
+.verdict.warn{background:var(--warnbg);color:var(--warn);border-color:var(--accent2)}
 .verdict .why{color:var(--muted);margin-top:2px}
 .progressbar{height:10px;background:var(--line);border-radius:999px;overflow:hidden;margin:8px 0}
 .progressbar>i{display:block;height:100%;background:linear-gradient(90deg,var(--accent2),var(--accent));border-radius:999px;transition:width .3s}

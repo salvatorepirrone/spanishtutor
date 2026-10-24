@@ -33,7 +33,8 @@ export function fakeClaude(counter) {
         { type: 'scelta', q: `Mi hermana ___ médica ${stamp}.`, options: ['es', 'está', 'hay', 'tiene'], answer: 0, why: 'ser' },
       ] };
     } else if (sys.includes('Valuta traduzioni')) payload = { results: JSON.parse(b.messages[0].content).map((x, i) => ({ ok: i === 0, corrected: x.ref, note: 'nota' })) };
-    else if (sys.includes('lista di vocabolario')) payload = { words: Array.from({ length: 24 }, (_, i) => ({ es: 'la palabra' + i, it: 'parola ' + i, ex: 'Ejemplo ' + i, exit: 'Esempio ' + i, type: 'nome' })) };
+    else if (sys.includes('test di vocabolario')) payload = { results: JSON.parse(b.messages[0].content).map((x) => ({ ok: x.answer.startsWith('sin'), note: x.answer.startsWith('sin') ? 'sinonimo valido di ' + x.es : 'significa altro' })) };
+    else if (sys.includes('lista di vocabolario')) payload = { words: Array.from({ length: 24 }, (_, i) => ({ es: 'la palabra' + i, it: 'parola ' + i, syn: ['el vocablo' + i], ex: 'Ejemplo ' + i, exit: 'Esempio ' + i, type: 'nome' })) };
     else if (sys.includes('test di livello')) {
       const secs = ['tempi', 'forme', 'lessico', 'comprensione'];
       payload = { items: Array.from({ length: 20 }, (_, i) => ({ type: 'scelta', section: secs[Math.floor(i / 5)], level: ['A2', 'B1', 'B2'][i % 3], q: `Domanda test numero ${i} ${counter.n}`, text: i >= 15 ? 'Testo breve.' : undefined, options: ['a', 'b', 'c', 'd'], answer: i % 4, why: 'perché' })) };
@@ -191,7 +192,17 @@ export async function run({ iterations = 1000 } = {}) {
   r = await call('POST', '/api', { cookie: S, body: { action: 'deck_review', es: 'la palabra3', known: true } });
   ok(r.json.ok === true, 'deck_review: parola trovata');
   r = await call('POST', '/api', { cookie: S, body: { action: 'deck', limit: 40 } });
-  ok(r.json.total === 26 && r.json.dueTotal === 25 && r.json.boxes[1] === 1, 'mazzo: una parola promossa e rimandata', JSON.stringify(r.json.boxes) + ' ' + r.json.dueTotal);
+  ok(r.json.due.some((c) => c.es === 'la palabra5' && Array.isArray(c.syn) && c.syn[0] === 'el vocablo5'), 'il mazzo conserva i sinonimi');
+  r = await call('POST', '/api', { cookie: S, body: { action: 'grade_vocab', items: [{ it: 'parola 1', es: 'la palabra1', answer: 'sinónimo' }, { it: 'parola 2', es: 'la palabra2', answer: 'casa' }, { it: 'parola 3', es: 'la palabra3', answer: '' }] } });
+  ok(r.status === 200 && r.json.results.length === 3 && r.json.results[0].ok && !r.json.results[1].ok, 'grade_vocab: sinonimi accettati, altre parole no', JSON.stringify(r.json));
+  r = await call('POST', '/api', { cookie: S, body: { action: 'grade_vocab', items: [] } });
+  ok(r.status === 400, 'grade_vocab senza risposte: 400');
+  r = await call('POST', '/api', { cookie: S, body: { action: 'deck_review_many', items: [{ es: 'la palabra7', known: true }, { es: 'la palabra8', known: false }, { es: 'inesistente', known: true }] } });
+  ok(r.status === 200 && r.json.found === 2, 'deck_review_many: aggiorna le parole del mazzo e ignora le altre', JSON.stringify(r.json));
+  r = await call('POST', '/api', { cookie: S, body: { action: 'record_exercise', topic: 'vocabolario', correct: 1, total: 2, errors: [{ orig: 'x', corr: 'la palabra8', note: 'parola 8' }] } });
+  ok(r.status === 200 && r.json.stats.topErrors['lessico'] >= 1, 'record_exercise vocabolario: errori nella categoria lessico');
+  r = await call('POST', '/api', { cookie: S, body: { action: 'deck', limit: 40 } });
+  ok(r.json.total === 26 && r.json.dueTotal === 24 && r.json.boxes[1] === 2, 'mazzo: due parole promosse e rimandate', JSON.stringify(r.json.boxes) + ' ' + r.json.dueTotal);
 
   r = await call('POST', '/api', { cookie: S, body: { action: 'test' } });
   ok(r.status === 200 && r.json.items.length === 20 && r.json.writing, 'test: 20 domande e una consegna');

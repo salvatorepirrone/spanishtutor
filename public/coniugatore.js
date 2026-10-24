@@ -297,7 +297,7 @@ var SPV = (function () {
   // Normalizza quello che l'utente scrive: minuscole, senza spazi; ritorna null se non è un infinito.
   function parse(text) {
     var t = String(text || '').trim().toLowerCase().normalize('NFC');
-    if (!/^[a-záéíóúüñ]{3,}$/.test(t)) return null;
+    if (!/^[a-záéíóúüñ]{2,}$/.test(t)) return null;
     if (/(ar|er|ir|ír)$/.test(t)) return { inf: t, reflexive: false };
     if (/(ar|er|ir|ír)se$/.test(t)) return { inf: t.slice(0, -2), reflexive: true };
     return null;
