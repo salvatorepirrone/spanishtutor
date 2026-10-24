@@ -10,15 +10,15 @@ Esiste una "fotocopia" per il **portoghese del Brasile** con la stessa struttura
 | | Spagnolo | Portoghese |
 | --- | --- | --- |
 | Cartella | `C:\Users\salva\SpanishTutor` | `C:\Users\salva\PortugueseTutor` |
-| Ramo di lavoro | `dev` (push su `origin/dev`) | `main` |
-| Netlify | sito già attivo, ma **non si fa deploy per ora** | non collegato, non pubblicato |
+| Ramo di lavoro | `dev` (push su `origin/dev`; per pubblicare si unisce in `main`) | `main` (nessun merge necessario) |
+| Netlify | sito già attivo, ma **non si fa deploy per ora** (deploy automatici fermati) | collegato, ma deploy automatici fermati: si pubblica solo a mano |
 
 Esiste anche una vecchia versione PHP per NAS nella cartella `spagnolo/`: non è più sviluppata e ha bug noti, non si tocca.
 
 ## Regole di lavoro stabilite dall'utente
 
 - **Nessun deploy su Netlify** per lo spagnolo finché l'utente non lo decide. Il piano gratuito ha 300 crediti e ogni deploy ne costa 15. Quando sarà il momento: unire `dev` in `main` e fare **un solo deploy manuale**. I deploy automatici sono già fermati.
-- Il portoghese resta solo su GitHub. Quando si pubblicherà, impostare **prima** le variabili d'ambiente per non sprecare deploy (i passaggi sono nel README).
+- Il portoghese è collegato a Netlify ma con deploy automatici fermati: il push su GitHub non pubblica nulla. Quando si pubblicherà, verificare **prima** le variabili d'ambiente per non sprecare deploy (i passaggi sono nel README).
 - L'utente chiede quasi sempre commit e push dopo ogni modifica: spagnolo su `dev`, portoghese su `main`. Ogni modifica va fatta in entrambe le versioni, adattando la lingua.
 - I messaggi di commit sono in italiano (in portoghese per la copia PT) e finiscono con `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>`.
 - Si risponde in italiano. L'utente è sbrigativo: preferisce risultati verificati e un riepilogo onesto di limiti e cose non provate.
