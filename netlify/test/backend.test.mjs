@@ -118,6 +118,12 @@ export function fakeClaude(counter, opts = {}) {
         { type: 'scelta', q: `Mi hermana ___ médica ${stamp}.`, options: ['es', 'está', 'hay', 'tiene'], answer: 0, why: 'ser' },
       ] };
     } else if (sys.includes('Valuta traduzioni')) payload = { results: JSON.parse(b.messages[0].content).map((x, i) => ({ ok: i === 0, corrected: x.ref, note: 'nota' })) };
+    else if (sys.includes('ha cercato un verbo')) {
+      const w = b.messages[0].content.replace('Parola cercata: ', '');
+      payload = w === 'ablar' ? { exists: false, it: '', regular: false, note: 'Probabile errore di battitura.', suggestions: ['hablar', 'ablandar'] }
+        : w.startsWith('irr') ? { exists: true, it: 'verbo irregolare di prova', regular: false, note: 'Ha un presente irregolare.', suggestions: [] }
+        : { exists: true, it: 'ronzare', regular: true, note: 'Verbo regolare.', suggestions: [] };
+    }
     else if (sys.includes('test di vocabolario')) payload = { results: JSON.parse(b.messages[0].content).map((x) => ({ ok: x.answer.startsWith('sin'), note: x.answer.startsWith('sin') ? 'sinonimo valido di ' + x.es : 'significa altro' })) };
     else if (sys.includes('lista di vocabolario') && opts.realVocab) payload = { words: demoWords(b.messages[0].content) };
     else if (sys.includes('lista di vocabolario')) payload = { words: Array.from({ length: 24 }, (_, i) => ({ es: 'la palabra' + i, it: 'parola ' + i, syn: ['el vocablo' + i], ex: 'Ejemplo ' + i, exit: 'Esempio ' + i, type: 'nome' })) };
@@ -283,6 +289,17 @@ export async function run({ iterations = 1000 } = {}) {
   r = await call('POST', '/api', { cookie: S, body: { action: 'grade_vocab', items: [{ it: 'parola 1', es: 'la palabra1', answer: 'sinónimo' }, { it: 'parola 2', es: 'la palabra2', answer: 'casa' }, { it: 'parola 3', es: 'la palabra3', answer: '' }, { it: 'parola 4', es: 'la palabra4', answer: 'sinonimo italiano', dir: 'es-it' }] } });
   ok(r.status === 200 && r.json.results.length === 4 && r.json.results[0].ok && !r.json.results[1].ok && r.json.results[3].ok, 'grade_vocab: sinonimi accettati (anche nel verso spagnolo→italiano), altre parole no', JSON.stringify(r.json));
   ok(JSON.stringify(counter.last.messages).includes('es-it') && counter.last.system.includes('es-it'), 'grade_vocab: la direzione arriva al tutor');
+  r = await call('POST', '/api', { cookie: S, body: { action: 'verb_check', inf: 'zumbar' } });
+  ok(r.status === 200 && r.json.exists && r.json.regular && r.json.it === 'ronzare', 'verb_check: verbo esistente e regolare', JSON.stringify(r.json));
+  const callsBefore = counter.n;
+  r = await call('POST', '/api', { cookie: S, body: { action: 'verb_check', inf: 'zumbar' } });
+  ok(r.status === 200 && counter.n === callsBefore, 'verb_check: la seconda richiesta viene dalla cache (nessuna chiamata a Claude)');
+  r = await call('POST', '/api', { cookie: S, body: { action: 'verb_check', inf: 'ablar' } });
+  ok(r.status === 200 && !r.json.exists && r.json.suggestions[0] === 'hablar' && r.json.regular === false, 'verb_check: verbo inesistente con suggerimenti', JSON.stringify(r.json));
+  r = await call('POST', '/api', { cookie: S, body: { action: 'verb_check', inf: 'irregolarar' } });
+  ok(r.status === 200 && r.json.exists && !r.json.regular, 'verb_check: verbo esistente ma irregolare');
+  r = await call('POST', '/api', { cookie: S, body: { action: 'verb_check', inf: 'casa' } });
+  ok(r.status === 400, 'verb_check: parola che non è un infinito rifiutata');
   r = await call('POST', '/api', { cookie: S, body: { action: 'grade_vocab', items: [] } });
   ok(r.status === 400, 'grade_vocab senza risposte: 400');
   r = await call('POST', '/api', { cookie: S, body: { action: 'deck_review_many', items: [{ es: 'la palabra7', known: true }, { es: 'la palabra8', known: false }, { es: 'inesistente', known: true }] } });

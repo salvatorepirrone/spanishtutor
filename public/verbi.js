@@ -64,41 +64,72 @@
   }
 
   // ---------------------------------------------------------------- tabelle
-  // Verbo non presente nell'elenco: niente tabelle a sorpresa (potrebbe non esistere o essere irregolare). Si propongono i verbi
-  // simili e, solo se la parola sembra un infinito, si può chiedere la coniugazione regolare.
+  // Verbo non presente nell'elenco: niente tabelle a sorpresa (potrebbe non esistere o essere irregolare). Se la parola sembra un
+  // infinito si chiede al tutor se esiste e se è regolare; altrimenti si propongono i verbi simili.
   function unknown(area, parsed) {
     SP.clear(area);
     var card = el('div', 'card');
     card.appendChild(el('h2', '', parsed.inf));
     var ok = SPV.plausible(parsed.inf);
     card.appendChild(el('p', '', ok
-      ? 'Non trovo «' + parsed.inf + '» tra i verbi dell\'elenco. Non ti mostro una coniugazione alla cieca: il verbo potrebbe non esistere, oppure essere irregolare.'
+      ? 'Non trovo «' + parsed.inf + '» tra i verbi dell\'elenco.'
       : '«' + parsed.inf + '» non sembra un verbo all\'infinito.'));
-    var sug = SPV.suggest(parsed.inf, 6);
-    if (sug.length) {
-      card.appendChild(el('div', 'muted', 'Forse cercavi:'));
-      var chips = el('div', 'chipsrow');
-      sug.forEach(function (v) {
+    var status = el('div'); card.appendChild(status);
+    area.appendChild(card);
+
+    function chips(list) {
+      if (!list.length) { status.appendChild(el('p', 'muted', 'Nessun verbo simile nell\'elenco.')); return; }
+      status.appendChild(el('div', 'muted', 'Forse cercavi:'));
+      var row = el('div', 'chipsrow');
+      list.forEach(function (v) {
         var b = el('button', 'small chipv', v);
         b.addEventListener('click', function () { setHash(v); });
-        chips.appendChild(b);
+        row.appendChild(b);
       });
-      card.appendChild(chips);
-    } else {
-      card.appendChild(el('p', 'muted', 'Nessun verbo simile nell\'elenco.'));
+      status.appendChild(row);
     }
-    if (ok) {
-      var force = el('button', '', 'Mostra comunque la coniugazione regolare'); force.style.marginTop = '12px';
+    function forceButton(label) {
+      var force = el('button', '', label || 'Mostra comunque la coniugazione regolare'); force.style.marginTop = '12px';
       force.addEventListener('click', function () { show(area, { inf: parsed.inf, reflexive: parsed.reflexive, forceRegular: true }); });
-      card.appendChild(force);
+      status.appendChild(force);
     }
-    area.appendChild(card);
+    function merged(first) {
+      var out = [];
+      first.concat(SPV.suggest(parsed.inf, 6)).forEach(function (v) { if (out.indexOf(v) < 0) out.push(v); });
+      return out.slice(0, 6);
+    }
+
+    if (!ok) { chips(SPV.suggest(parsed.inf, 6)); return; }
+
+    var wait = SP.loading(status, 'Chiedo al tutor se «' + parsed.inf + '» esiste…');
+    SP.call({ action: 'verb_check', inf: parsed.inf }).then(function (r) {
+      wait();
+      if (r.exists && r.regular) {                          // esiste ed è regolare: si può coniugare con le regole
+        show(area, { inf: parsed.inf, reflexive: parsed.reflexive, forceRegular: true, verified: r });
+      } else if (r.exists) {                                // esiste ma è irregolare e non ho la sua tabella
+        status.appendChild(el('p', '', 'Il tutor conferma che «' + parsed.inf + '» esiste' + (r.it ? ' (' + r.it + ')' : '') + ', ma non è regolare' + (r.note ? ': ' + r.note : '.') + ' Non ho la sua tabella di coniugazione: una coniugazione regolare sarebbe sbagliata in alcune forme.'));
+        forceButton('Mostra comunque la coniugazione regolare (con forme sbagliate)');
+      } else {                                              // non esiste
+        status.appendChild(el('p', '', 'Il tutor non conosce «' + parsed.inf + '» come verbo.' + (r.note ? ' ' + r.note : '')));
+        chips(merged(r.suggestions || []));
+      }
+    }).catch(function (e) {                                 // tutor non raggiungibile o limite raggiunto: si ripiega sull'elenco locale
+      wait();
+      status.appendChild(el('p', 'err', 'Non sono riuscito a chiedere al tutor: ' + e.message));
+      status.appendChild(el('p', 'muted', 'Non ti mostro una coniugazione alla cieca: il verbo potrebbe non esistere, oppure essere irregolare.'));
+      chips(SPV.suggest(parsed.inf, 6));
+      forceButton();
+    });
   }
 
   function show(area, parsed) {
     SP.clear(area);
     var c = SPV.full(parsed.inf);
     if (!c.known && !parsed.forceRegular) { unknown(area, parsed); return; }
+    if (parsed.verified) {
+      c.it = parsed.verified.it || '';
+      c.notes = ['Verbo non presente nel mio elenco: il tutor conferma che esiste e si coniuga in modo regolare' + (parsed.verified.note ? ' (' + parsed.verified.note + ')' : '') + '. Le forme sono calcolate con le regole del verbo regolare.'];
+    }
     var head = el('div', 'card');
     var h = el('h2', '', c.inf + ' ');
     h.appendChild(SP.speakButton(c.inf));

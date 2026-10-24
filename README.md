@@ -13,7 +13,7 @@ Il tutor è Claude, chiamato solo dal server: nessuna chiave nel browser né in 
 | Esercizi | Serie generate per argomento: scelta multipla, completa, traduci |
 | Grammatica | 44 argomenti in 7 sezioni, lezioni generate una volta e conservate |
 | Vocabolario | 16 temi con liste di parole e **test di scrittura** nei due versi (leggo l'italiano e scrivo la parola spagnola, oppure il contrario; i sinonimi valgono), mazzo personale con ripasso a intervalli |
-| Verbi | Coniugazione con le forme irregolari evidenziate (motore a regole, circa 270 verbi) e allenamento |
+| Verbi | Coniugazione con le forme irregolari evidenziate (motore a regole, circa 270 verbi) e allenamento; per un verbo non in elenco il tutor controlla se esiste e se è regolare |
 | Test | 20 domande + testo scritto, stima del livello e progressi |
 
 Al primo accesso c'è un test di ingresso (o la scelta del livello) e il tutor prepara un piano di 8 settimane.
@@ -94,7 +94,7 @@ un server statico, da una pagina del browser:
 
 ```js
 const m = await import('/netlify/test/backend.test.mjs');
-console.log(await m.run());   // { failures: 0, total: 69, ... }
+console.log(await m.run());   // { failures: 0, total: 81, ... }
 ```
 
 ## Limiti da conoscere
