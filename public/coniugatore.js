@@ -294,6 +294,36 @@ var SPV = (function () {
     return c;
   }
 
+  // ---------------------------------------------------------------- verbi non in elenco
+  function plain(s) { return String(s).normalize('NFD').replace(/[\u0300-\u036f]/g, ''); }
+  function distance(a, b) {
+    var prev = [], cur, i, j;
+    for (j = 0; j <= b.length; j++) prev[j] = j;
+    for (i = 1; i <= a.length; i++) {
+      cur = [i];
+      for (j = 1; j <= b.length; j++) cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a.charAt(i - 1) === b.charAt(j - 1) ? 0 : 1));
+      prev = cur;
+    }
+    return prev[b.length];
+  }
+  function isSubsequence(a, b) { var k = 0; for (var i = 0; i < b.length && k < a.length; i++) if (b.charAt(i) === a.charAt(k)) k++; return k === a.length; }
+
+  // Verbi dell'elenco simili a quello scritto (errori di battitura, lettere mancanti): "dir" → dar, decir, ir…
+  function suggest(text, n) {
+    var t = plain(text), out = [];
+    Object.keys(V).forEach(function (v) {
+      var pv = plain(v), d = distance(t, pv);
+      var sub = t.length >= 3 && isSubsequence(t, pv), pre = t.length >= 3 && pv.indexOf(t) === 0;
+      if (v === text || (d > 2 && !sub && !pre)) return;
+      out.push({ v: v, score: d - (sub ? 1 : 0) - (pre ? 1 : 0), same: t.charAt(0) === pv.charAt(0) ? 0 : 1, gap: Math.abs(t.length - pv.length) });
+    });
+    out.sort(function (a, b) { return (a.score - b.score) || (a.same - b.same) || (a.gap - b.gap) || a.v.localeCompare(b.v); });
+    return out.slice(0, n || 6).map(function (x) { return x.v; });
+  }
+
+  // Un infinito plausibile ha almeno una vocale prima della desinenza (ser, ver, dar, ir sono in elenco e non passano di qui).
+  function plausible(inf) { return /[aeiouáàâãéêíóôõúü]/.test(inf.slice(0, -2)); }
+
   // Normalizza quello che l'utente scrive: minuscole, senza spazi; ritorna null se non è un infinito.
   function parse(text) {
     var t = String(text || '').trim().toLowerCase().normalize('NFC');
@@ -304,7 +334,7 @@ var SPV = (function () {
   }
 
   return {
-    PERSONS: PERSONS, IMP_PERSONS: IMP_PERSONS, TENSES: TENSES, verbs: V, full: full, conj: conj, parse: parse,
+    PERSONS: PERSONS, IMP_PERSONS: IMP_PERSONS, TENSES: TENSES, verbs: V, full: full, conj: conj, parse: parse, suggest: suggest, plausible: plausible,
     list: function () { return Object.keys(V).sort(); },
     irregularTop: ['ser', 'estar', 'ir', 'tener', 'hacer', 'poder', 'querer', 'decir', 'venir', 'poner', 'saber', 'ver', 'dar', 'salir', 'traer', 'oír', 'caer', 'haber',
                    'pedir', 'dormir', 'volver', 'seguir', 'sentir', 'pensar', 'empezar', 'jugar', 'conocer', 'construir', 'leer', 'conducir', 'andar', 'caber', 'morir', 'abrir', 'escribir', 'romper', 'mantener', 'proponer']

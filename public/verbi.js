@@ -64,9 +64,41 @@
   }
 
   // ---------------------------------------------------------------- tabelle
+  // Verbo non presente nell'elenco: niente tabelle a sorpresa (potrebbe non esistere o essere irregolare). Si propongono i verbi
+  // simili e, solo se la parola sembra un infinito, si può chiedere la coniugazione regolare.
+  function unknown(area, parsed) {
+    SP.clear(area);
+    var card = el('div', 'card');
+    card.appendChild(el('h2', '', parsed.inf));
+    var ok = SPV.plausible(parsed.inf);
+    card.appendChild(el('p', '', ok
+      ? 'Non trovo «' + parsed.inf + '» tra i verbi dell\'elenco. Non ti mostro una coniugazione alla cieca: il verbo potrebbe non esistere, oppure essere irregolare.'
+      : '«' + parsed.inf + '» non sembra un verbo all\'infinito.'));
+    var sug = SPV.suggest(parsed.inf, 6);
+    if (sug.length) {
+      card.appendChild(el('div', 'muted', 'Forse cercavi:'));
+      var chips = el('div', 'chipsrow');
+      sug.forEach(function (v) {
+        var b = el('button', 'small chipv', v);
+        b.addEventListener('click', function () { setHash(v); });
+        chips.appendChild(b);
+      });
+      card.appendChild(chips);
+    } else {
+      card.appendChild(el('p', 'muted', 'Nessun verbo simile nell\'elenco.'));
+    }
+    if (ok) {
+      var force = el('button', '', 'Mostra comunque la coniugazione regolare'); force.style.marginTop = '12px';
+      force.addEventListener('click', function () { show(area, { inf: parsed.inf, reflexive: parsed.reflexive, forceRegular: true }); });
+      card.appendChild(force);
+    }
+    area.appendChild(card);
+  }
+
   function show(area, parsed) {
     SP.clear(area);
     var c = SPV.full(parsed.inf);
+    if (!c.known && !parsed.forceRegular) { unknown(area, parsed); return; }
     var head = el('div', 'card');
     var h = el('h2', '', c.inf + ' ');
     h.appendChild(SP.speakButton(c.inf));
