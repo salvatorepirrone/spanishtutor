@@ -3,6 +3,11 @@
   'use strict';
   var el = SP.el;
   var TENSES = SPV.TENSES;
+  // Nome del tempo in italiano, accanto a quello della lingua studiata
+  var TENSE_IT = { presente: 'presente', indefinido: 'passato remoto', imperfecto: 'imperfetto', futuro: 'futuro semplice', condicional: 'condizionale',
+    perfecto: 'passato prossimo', pluscuamperfecto: 'trapassato prossimo', subjPresente: 'congiuntivo presente', subjImperfecto: 'congiuntivo imperfetto',
+    impAfirmativo: 'imperativo affermativo', impNegativo: 'imperativo negativo' };
+  function tenseName(t) { return t.label + (TENSE_IT[t.key] && TENSE_IT[t.key] !== t.label.toLowerCase() ? ' (' + TENSE_IT[t.key] + ')' : ''); }
 
   function setHash(arg) { SP.go('verbi', arg || ''); }
 
@@ -66,7 +71,7 @@
       var t = TENSES.filter(function (x) { return x.key === k; })[0];
       if (!t) return;
       var card = el('div', 'card tense');
-      var title = el('h3', '', t.label); title.style.marginTop = '0';
+      var title = el('h3', '', tenseName(t)); title.style.marginTop = '0';
       card.appendChild(title);
       card.appendChild(el('div', 'muted', t.use));
       var tb = el('table', 'conj'), head = el('tr'), body = el('tbody');
@@ -178,7 +183,7 @@
     TENSES.forEach(function (t) {
       if (t.group !== group) { group = t.group; area.appendChild(el('div', 'sec-title', group)); grid = el('div', 'tgrid'); area.appendChild(grid); }
       var card = el('div', 'card tense');
-      var title = el('h3', '', t.label);
+      var title = el('h3', '', tenseName(t));
       title.style.marginTop = '0';
       card.appendChild(title);
       card.appendChild(el('div', 'muted', t.use));
@@ -219,7 +224,7 @@
       var t = TENSES.filter(function (x) { return x.key === k; })[0];
       var l = el('label'), c = document.createElement('input');
       c.type = 'checkbox'; c.checked = k === 'presente' || k === 'indefinido';
-      boxes[k] = c; l.appendChild(c); l.appendChild(document.createTextNode(' ' + t.label)); checks.appendChild(l);
+      boxes[k] = c; l.appendChild(c); l.appendChild(document.createTextNode(' ' + tenseName(t))); checks.appendChild(l);
     });
     card.appendChild(checks);
 
@@ -257,7 +262,7 @@
       if (seen[key]) continue;
       seen[key] = true;
       var person = (tk === 'impAfirmativo' || tk === 'impNegativo') ? SPV.IMP_PERSONS[i] : SPV.PERSONS[i];
-      qs.push({ inf: v, it: c.it, tense: t.label, person: person, answer: c[tk][i], irregular: c.irregular[tk][i] });
+      qs.push({ inf: v, it: c.it, tense: tenseName(t), person: person, answer: c[tk][i], irregular: c.irregular[tk][i] });
     }
     return qs;
   }
