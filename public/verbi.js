@@ -27,7 +27,7 @@
 
     card.appendChild(el('div', 'muted', 'Irregolari più importanti:')).style.marginTop = '10px';
     var chips = el('div', 'chipsrow');
-    SPV.irregularTop.forEach(function (v) {
+    SPV.irregularTop.slice().sort(function (a, b) { return a.localeCompare(b, 'es'); }).forEach(function (v) {
       var b = el('button', 'small chipv', v);
       b.addEventListener('click', function () { setHash(v); });
       chips.appendChild(b);
