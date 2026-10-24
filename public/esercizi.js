@@ -167,17 +167,17 @@
           var st = states[i];
           if (it.type === 'traduci') {
             var g = grades[i] || { ok: false, corrected: it.ref, note: '' };
-            st.ok = g.ok; st.answered = true;
+            st.score = typeof g.score === 'number' ? g.score : (g.ok ? 1 : 0); st.ok = st.score === 1; st.answered = true;
             var v = el('div');
             var host = area.querySelectorAll('.q')[i];
-            showVerdict(host.lastChild, g.ok ? 'ok' : 'ko', (g.ok ? 'Giusto' : 'Da correggere') + (g.corrected ? ' → ' + g.corrected : ''), g.note || it.why);
+            showVerdict(host.lastChild, st.score === 1 ? 'ok' : st.score > 0 ? 'warn' : 'ko', (st.score === 1 ? 'Giusto' : st.score > 0 ? 'Quasi: ' + fmt(st.score) + ' punti su 1' : 'Da correggere') + (g.corrected ? ' → ' + g.corrected : ''), g.note || it.why);
             if (st.input) st.input.disabled = true;
           }
-          if (st.ok) correct++;
-          else errors.push({ orig: st.given || '(vuota)', corr: it.type === 'scelta' ? it.options[it.answer] : it.type === 'completa' ? it.answer : (it.ref), note: it.why || it.q });
+          correct += st.score !== undefined ? st.score : (st.ok ? 1 : 0);
+          if (!st.ok) errors.push({ orig: st.given || '(vuota)', corr: it.type === 'scelta' ? it.options[it.answer] : it.type === 'completa' ? it.answer : (it.ref), note: it.why || it.q });
         });
         SP.clear(fin);
-        fin.appendChild(el('div', 'result', correct + ' / ' + items.length));
+        fin.appendChild(el('div', 'result', fmt(correct) + ' / ' + items.length));
         fin.appendChild(el('div', 'muted', correct === items.length ? 'Serie perfetta!' : correct >= items.length * 0.7 ? 'Buon lavoro, ripassa gli errori qui sopra.' : 'Vale la pena rivedere la grammatica di questo argomento.'));
         var again = el('button', 'primary', 'Un\'altra serie'); again.style.marginTop = '8px';
         again.addEventListener('click', function () { SP.clear(area); finished(); area.parentNode.scrollIntoView(); });
@@ -201,6 +201,9 @@
         .catch(function (e) { stop(); fin.appendChild(el('div', 'err', e.message)); finish.disabled = false; });
     });
   }
+
+  // Punteggio con la virgola e al massimo due decimali (6,25)
+  function fmt(x) { return String(Math.round(x * 100) / 100).replace('.', ','); }
 
   function showVerdict(node, kind, text, why) {
     SP.clear(node);

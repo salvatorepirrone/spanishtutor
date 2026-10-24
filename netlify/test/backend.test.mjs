@@ -117,7 +117,7 @@ export function fakeClaude(counter, opts = {}) {
         { type: 'completa', q: `Ayer tú ___ (ir) al banco, pero ___ (ser) fiesta ${stamp}.`, answer: 'fuiste / era', alts: [], why: 'querer' },
         { type: 'scelta', q: `Mi hermana ___ médica ${stamp}.`, options: ['es', 'está', 'hay', 'tiene'], answer: 0, why: 'ser' },
       ] };
-    } else if (sys.includes('Valuta traduzioni')) payload = { results: JSON.parse(b.messages[0].content).map((x, i) => ({ ok: i === 0, corrected: x.ref, note: 'nota' })) };
+    } else if (sys.includes('Valuta traduzioni')) payload = { results: JSON.parse(b.messages[0].content).map((x, i) => ({ ok: i === 0, score: i === 1 ? 0.7 : undefined, corrected: x.ref, note: 'nota' })) };
     else if (sys.includes('forme coniugate del verbo')) {
       payload = { results: JSON.parse(b.messages[0].content).map((x) => ({ i: x.i, forms: x.persons.map((p) => p + ' ' + x.inf + ' (it)') })) };
     }
@@ -276,6 +276,9 @@ export async function run({ iterations = 1000 } = {}) {
   ok(r.status === 200 && repeated.length === 0, 'seconda serie senza frasi uguali alla prima', repeated.map((i) => i.q).join(' | '));
   r = await call('POST', '/api', { cookie: S, body: { action: 'grade', items: [{ q: 'Vado al mercato.', ref: 'Voy al mercado.', answer: 'Voy al mercado' }, { q: 'x', ref: 'y', answer: '' }] } });
   ok(r.status === 200 && r.json.results.length === 2 && r.json.results[0].ok && !r.json.results[1].ok, 'grade: risultati nello stesso ordine');
+  ok(r.json.results[0].score === 1 && r.json.results[1].score === 0.75, 'grade: punteggio decimale a passi di 0,25 (0,7 → 0,75)', JSON.stringify(r.json.results));
+  r = await call('POST', '/api', { cookie: S, body: { action: 'record_exercise', topic: 'mix', correct: 3.6, total: 4, errors: [] } });
+  ok(r.status === 200 && r.json.stats.exProgress.mix.correct === 3.5, 'record_exercise: accetta punteggi decimali (3,6 → 3,5)', JSON.stringify(r.json.stats.exProgress));
   r = await call('POST', '/api', { cookie: S, body: { action: 'record_exercise', topic: 'pron-diretti', correct: 5, total: 8, errors: [{ orig: 'lo', corr: 'la', note: 'n' }] } });
   ok(r.status === 200 && r.json.stats.exProgress['pron-diretti'].done === 8 && r.json.stats.topErrors['Pronomi'] === 1, 'record_exercise: progressi e errore per sezione');
 
