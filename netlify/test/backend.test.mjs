@@ -29,7 +29,7 @@ export function fakeClaude(counter) {
         { type: 'completa', q: 'Ayer ___ al mercado ' + (stamp - 2) + '.', answer: 'fui', alts: [], why: 'ripetuta' },
         { type: 'scelta', q: `Ellos ___ tarde ${stamp}.`, options: ['llegan', 'llegas', 'llego', 'llegamos'], answer: 0, why: 'llegar' },
         { type: 'traduci', q: `Mangio una mela ${stamp}.`, ref: 'Como una manzana.', why: 'comer' },
-        { type: 'completa', q: `Vosotros ___ (querer) agua ${stamp}.`, answer: 'queréis', alts: [], why: 'querer' },
+        { type: 'completa', q: `Ayer tú ___ (ir) al banco, pero ___ (ser) fiesta ${stamp}.`, answer: 'fuiste / era', alts: [], why: 'querer' },
         { type: 'scelta', q: `Mi hermana ___ médica ${stamp}.`, options: ['es', 'está', 'hay', 'tiene'], answer: 0, why: 'ser' },
       ] };
     } else if (sys.includes('Valuta traduzioni')) payload = { results: JSON.parse(b.messages[0].content).map((x, i) => ({ ok: i === 0, corrected: x.ref, note: 'nota' })) };

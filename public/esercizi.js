@@ -96,24 +96,53 @@
           btns.push(b); q.appendChild(b);
         });
       } else {
-        var inp = el('input'); inp.type = 'text'; inp.autocomplete = 'off'; inp.autocapitalize = 'off'; inp.spellcheck = false;
-        inp.placeholder = it.type === 'traduci' ? 'Scrivi la traduzione in spagnolo' : 'Scrivi la forma corretta';
-        q.appendChild(inp);
+        function newInput(placeholder) {
+          var x = el('input'); x.type = 'text'; x.autocomplete = 'off'; x.autocapitalize = 'off'; x.spellcheck = false;
+          x.placeholder = placeholder;
+          return x;
+        }
         if (it.type === 'completa') {
+          // Una casella per ogni spazio ___: con più spazi la risposta attesa è "prima / seconda" e si confronta una per una.
+          var blanks = (it.q.match(/___/g) || []).length;
+          var parts = it.answer.split(/\s*[\/;]\s*/).filter(Boolean);
+          var multi = blanks > 1 && parts.length === blanks;
+          var inps = [];
+          for (var k = 0; k < (multi ? blanks : 1); k++) {
+            var xi = newInput(multi ? 'Spazio ' + (k + 1) + ' di ' + blanks : 'Scrivi la forma corretta');
+            inps.push(xi); q.appendChild(xi);
+            if (multi) xi.style.marginBottom = '6px';
+          }
           var chk = el('button', '', 'Controlla'); chk.style.marginTop = '8px';
           var doCheck = function () {
-            if (st.answered || !inp.value.trim()) return;
-            var r = SP.compare(inp.value, it.answer, it.alts);
-            st.answered = true; st.given = inp.value.trim(); st.ok = r !== 'no';
-            inp.disabled = true; chk.disabled = true;
+            if (st.answered) return;
+            var vals = inps.map(function (x) { return x.value.trim(); });
+            if (vals.some(function (v) { return !v; })) return;
+            var r;
+            if (multi) {
+              var rs = vals.map(function (v, k) { return SP.compare(v, parts[k]); });
+              r = rs.indexOf('no') >= 0 ? 'no' : (rs.indexOf('accent') >= 0 ? 'accent' : 'ok');
+              if (r === 'no') r = SP.compare(vals.join(' / '), it.answer, it.alts);   // combinazioni alternative indicate dal tutor
+            } else {
+              r = SP.compare(vals[0], it.answer, (it.alts || []).concat(parts.length > 1 ? parts : []));
+            }
+            st.answered = true; st.given = vals.join(' / '); st.ok = r !== 'no';
+            inps.forEach(function (x) { x.disabled = true; }); chk.disabled = true;
             var msg = r === 'ok' ? 'Giusto!' : r === 'accent' ? 'Giusto, ma attento agli accenti: ' + it.answer : 'Non proprio. Risposta: ' + it.answer;
             showVerdict(verdict, st.ok ? 'ok' : 'ko', msg, it.why);
             refresh();
           };
           chk.addEventListener('click', doCheck);
-          inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') doCheck(); });
+          inps.forEach(function (x, k) {
+            x.addEventListener('keydown', function (e) {
+              if (e.key !== 'Enter') return;
+              e.preventDefault();
+              if (k < inps.length - 1) inps[k + 1].focus(); else doCheck();
+            });
+          });
           q.appendChild(chk);
         } else {
+          var inp = newInput('Scrivi la traduzione in spagnolo');
+          q.appendChild(inp);
           inp.addEventListener('input', function () { st.given = inp.value; });
           q.appendChild(el('div', 'muted', 'Verrà valutata dal tutor alla fine.'));
           st.input = inp;

@@ -296,7 +296,7 @@ export async function exercises(ctx, inp) {
   const typeText = { misti: 'un mix equilibrato dei tre tipi', scelta: 'solo tipo "scelta"', completa: 'solo tipo "completa"', traduci: 'solo tipo "traduci"' }[kind];
   const system = CFG.BASE_RULES + `\nCrea esercizi per uno studente italiano, ${levelText(prof.level)}. Forma:\n`
     + '{"items":[{"type":"scelta","q":"frase con ___ al posto del vuoto","options":["a","b","c","d"],"answer":0,"why":"spiegazione breve in italiano"},'
-    + '{"type":"completa","q":"frase con ___ e, tra parentesi, il verbo o la parola base da coniugare/adattare","answer":"forma corretta","alts":["altre forme accettabili"],"why":"..."},'
+    + '{"type":"completa","q":"frase con ___ e, tra parentesi, il verbo o la parola base da coniugare/adattare","answer":"forma corretta (se la frase ha più spazi ___: le risposte in ordine, separate da ' / ')","alts":["altre forme accettabili"],"why":"..."},'
     + '{"type":"traduci","q":"frase da tradurre in spagnolo, in italiano","ref":"traduzione spagnola di riferimento","why":"punto di grammatica in gioco"}]}'
     + '\nRegole: "answer" nei tipi scelta è l\'indice (0-3) della risposta corretta: variane la posizione; una sola risposta giusta per gli esercizi di scelta e distrattori plausibili; frasi realistiche e brevi, tutte diverse tra loro; niente doppie soluzioni nei completamenti (se ce ne sono, mettile in alts); \'why\' spiega la regola in una frase.';
   // Varietà: contesti e persone a caso, e le frasi già proposte da non ripetere.
