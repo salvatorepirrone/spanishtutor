@@ -7,8 +7,92 @@ import { setIterations } from '../lib/core.mjs';
 const SECRET = 'x'.repeat(40);
 const ENV = { SESSION_SECRET: SECRET, SETUP_TOKEN: 'token-di-setup', ANTHROPIC_API_KEY: 'chiave-finta', PUBLIC_URL: 'https://esempio.netlify.app' };
 
-// Claude simulato: risponde in base a ciò che chiede il prompt di sistema.
-export function fakeClaude(counter) {
+
+// Parole vere per la demo locale (le prove del backend usano invece parole sintetiche e prevedibili).
+// Una riga per parola: spagnolo | italiano | sinonimi spagnoli separati da virgola | categoria
+const DEMO_WORDS = {
+  cibo: `el aguacate | avocado | | nome
+la manzana | mela | | nome
+el pan | pane | | nome
+el queso | formaggio | | nome
+la leche | latte | | nome
+el huevo | uovo | | nome
+el arroz | riso | | nome
+la carne | carne | | nome
+el pescado | pesce | | nome
+la verdura | verdura | la hortaliza | nome
+el postre | dolce, dessert | | nome
+el desayuno | colazione | | nome
+la cena | cena | | nome
+cocinar | cucinare | guisar | verbo
+la receta | ricetta | | nome
+el camarero | cameriere | el mesero | nome
+la cuenta | conto | | nome
+pedir | ordinare, chiedere | | verbo
+el plato | piatto | | nome
+el vaso | bicchiere | | nome
+sabroso | saporito, gustoso | rico | aggettivo
+picante | piccante | | aggettivo
+hervir | bollire | | verbo
+la cuchara | cucchiaio | | nome`,
+  casa: `la casa | casa | el hogar, la vivienda | nome
+el piso | appartamento | el apartamento | nome
+la habitación | camera | el cuarto, el dormitorio | nome
+la cocina | cucina | | nome
+el baño | bagno | | nome
+la ventana | finestra | | nome
+la puerta | porta | | nome
+la escalera | scala | | nome
+el sofá | divano | | nome
+la mesa | tavolo | | nome
+la silla | sedia | | nome
+la cama | letto | | nome
+el armario | armadio | | nome
+la lámpara | lampada | | nome
+el techo | soffitto | | nome
+la pared | parete, muro | el muro | nome
+limpiar | pulire | | verbo
+barrer | spazzare | | verbo
+alquilar | affittare | arrendar | verbo
+mudarse | traslocare | | verbo
+el vecino | vicino | | nome
+el alquiler | affitto | | nome
+la llave | chiave | | nome
+el suelo | pavimento | | nome`,
+  generico: `bonito | bello, carino | hermoso, lindo | aggettivo
+rápido | veloce | veloz | aggettivo
+grande | grande | | aggettivo
+pequeño | piccolo | chico | aggettivo
+hablar | parlare | conversar | verbo
+empezar | cominciare | comenzar | verbo
+ayudar | aiutare | | verbo
+el trabajo | lavoro | el empleo | nome
+la ciudad | città | | nome
+el amigo | amico | | nome
+viajar | viaggiare | | verbo
+comprar | comprare | adquirir | verbo
+la semana | settimana | | nome
+el tiempo | tempo | | nome
+cansado | stanco | agotado | aggettivo
+contento | contento | feliz, alegre | aggettivo
+difícil | difficile | complicado | aggettivo
+fácil | facile | sencillo | aggettivo
+aprender | imparare | | verbo
+olvidar | dimenticare | | verbo
+recordar | ricordare | acordarse | verbo
+la pregunta | domanda | | nome
+la respuesta | risposta | | nome
+el viaje | viaggio | | nome`,
+};
+function demoWords(userText) {
+  const key = /Casa/.test(userText) ? 'casa' : /Cibo/.test(userText) ? 'cibo' : 'generico';
+  return DEMO_WORDS[key].split('\n').map((row) => row.split('|').map((x) => x.trim())).map((p) => ({
+    es: p[0], it: p[1], syn: (p[2] || '').split(',').map((x) => x.trim()).filter(Boolean), ex: 'Frase di esempio con «' + p[0] + '».', exit: 'Frase d\'esempio.', type: p[3] || 'nome',
+  }));
+}
+
+// Claude simulato: risponde in base a ciò che chiede il prompt di sistema. Con opts.realVocab le liste di vocabolario hanno parole vere.
+export function fakeClaude(counter, opts = {}) {
   return async (url, init) => {
     counter.n++;
     const b = JSON.parse(init.body);
@@ -34,6 +118,7 @@ export function fakeClaude(counter) {
       ] };
     } else if (sys.includes('Valuta traduzioni')) payload = { results: JSON.parse(b.messages[0].content).map((x, i) => ({ ok: i === 0, corrected: x.ref, note: 'nota' })) };
     else if (sys.includes('test di vocabolario')) payload = { results: JSON.parse(b.messages[0].content).map((x) => ({ ok: x.answer.startsWith('sin'), note: x.answer.startsWith('sin') ? 'sinonimo valido di ' + x.es : 'significa altro' })) };
+    else if (sys.includes('lista di vocabolario') && opts.realVocab) payload = { words: demoWords(b.messages[0].content) };
     else if (sys.includes('lista di vocabolario')) payload = { words: Array.from({ length: 24 }, (_, i) => ({ es: 'la palabra' + i, it: 'parola ' + i, syn: ['el vocablo' + i], ex: 'Ejemplo ' + i, exit: 'Esempio ' + i, type: 'nome' })) };
     else if (sys.includes('test di livello')) {
       const secs = ['tempi', 'forme', 'lessico', 'comprensione'];
@@ -193,8 +278,9 @@ export async function run({ iterations = 1000 } = {}) {
   ok(r.json.ok === true, 'deck_review: parola trovata');
   r = await call('POST', '/api', { cookie: S, body: { action: 'deck', limit: 40 } });
   ok(r.json.due.some((c) => c.es === 'la palabra5' && Array.isArray(c.syn) && c.syn[0] === 'el vocablo5'), 'il mazzo conserva i sinonimi');
-  r = await call('POST', '/api', { cookie: S, body: { action: 'grade_vocab', items: [{ it: 'parola 1', es: 'la palabra1', answer: 'sinónimo' }, { it: 'parola 2', es: 'la palabra2', answer: 'casa' }, { it: 'parola 3', es: 'la palabra3', answer: '' }] } });
-  ok(r.status === 200 && r.json.results.length === 3 && r.json.results[0].ok && !r.json.results[1].ok, 'grade_vocab: sinonimi accettati, altre parole no', JSON.stringify(r.json));
+  r = await call('POST', '/api', { cookie: S, body: { action: 'grade_vocab', items: [{ it: 'parola 1', es: 'la palabra1', answer: 'sinónimo' }, { it: 'parola 2', es: 'la palabra2', answer: 'casa' }, { it: 'parola 3', es: 'la palabra3', answer: '' }, { it: 'parola 4', es: 'la palabra4', answer: 'sinonimo italiano', dir: 'es-it' }] } });
+  ok(r.status === 200 && r.json.results.length === 4 && r.json.results[0].ok && !r.json.results[1].ok && r.json.results[3].ok, 'grade_vocab: sinonimi accettati (anche nel verso spagnolo→italiano), altre parole no', JSON.stringify(r.json));
+  ok(JSON.stringify(counter.last.messages).includes('es-it') && counter.last.system.includes('es-it'), 'grade_vocab: la direzione arriva al tutor');
   r = await call('POST', '/api', { cookie: S, body: { action: 'grade_vocab', items: [] } });
   ok(r.status === 400, 'grade_vocab senza risposte: 400');
   r = await call('POST', '/api', { cookie: S, body: { action: 'deck_review_many', items: [{ es: 'la palabra7', known: true }, { es: 'la palabra8', known: false }, { es: 'inesistente', known: true }] } });

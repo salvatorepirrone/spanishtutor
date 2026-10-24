@@ -19,7 +19,7 @@ class Persistent extends MemoryBlobs {
 
 const blobs = new Persistent();
 const env = { SESSION_SECRET: 'x'.repeat(40), SETUP_TOKEN: 'token-di-setup', ANTHROPIC_API_KEY: 'finta', PUBLIC_URL: location.origin };
-const fake = fakeClaude({ n: 0 });
+const fake = fakeClaude({ n: 0 }, { realVocab: true });
 
 // Utente "demo" già creato e collegato, così la demo si apre direttamente nell'app.
 const DEMO_PASSWORD = 'Rosso-Giallo-2468x';

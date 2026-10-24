@@ -12,7 +12,7 @@ Il tutor è Claude, chiamato solo dal server: nessuna chiave nel browser né in 
 | Conversazione | Dialogo con il tutor (testo e voce), correzione dopo ogni frase, suggerimenti in spagnolo (💡) |
 | Esercizi | Serie generate per argomento: scelta multipla, completa, traduci |
 | Grammatica | 44 argomenti in 7 sezioni, lezioni generate una volta e conservate |
-| Vocabolario | 16 temi con liste di parole e **test di scrittura** (si legge il significato e si scrive la parola; i sinonimi valgono), mazzo personale con ripasso a intervalli |
+| Vocabolario | 16 temi con liste di parole e **test di scrittura** nei due versi (leggo l'italiano e scrivo la parola spagnola, oppure il contrario; i sinonimi valgono), mazzo personale con ripasso a intervalli |
 | Verbi | Coniugazione con le forme irregolari evidenziate (motore a regole, circa 270 verbi) e allenamento |
 | Test | 20 domande + testo scritto, stima del livello e progressi |
 
@@ -59,8 +59,9 @@ py tools/demo.py
 ```
 
 Si apre `http://127.0.0.1:18080/` con il backend vero eseguito nel browser e un **Claude simulato**: le risposte del
-tutor, gli esercizi, le liste di vocabolario e la correzione dei sinonimi sono di prova (nel test di vocabolario viene
-accettata come sinonimo una risposta che comincia per «sin»), ma si possono percorrere tutte le schermate. Sei già
+tutor e gli esercizi sono di prova. Le liste di vocabolario hanno parole vere (per i temi «Cibo» e «Casa», con un
+elenco generico per gli altri), così il test di scrittura si può provare davvero; la valutazione dei sinonimi non noti è
+simulata (viene accettata come valida una risposta che comincia per «sin»). Si possono percorrere tutte le schermate. Sei già
 dentro come utente `demo`; i dati restano nella sessione del browser.
 
 **2. Prova con il vero Claude (`netlify dev`).** Serve Node.js 22 o più recente (`winget install OpenJS.NodeJS.LTS`).

@@ -1,5 +1,5 @@
 // Sezione Vocabolario: temi con liste di parole e test di scrittura (con ripasso a intervalli sul mazzo personale).
-// Nel test si legge il significato in italiano e si scrive la parola in spagnolo; i sinonimi valgono come risposte esatte.
+// Nel test si scrive la parola in spagnolo (leggendo l'italiano) o il significato in italiano (leggendo lo spagnolo); i sinonimi valgono.
 (function () {
   'use strict';
   var el = SP.el;
@@ -84,24 +84,31 @@
   }
 
   // ---------------------------------------------------------------- il test
-  // cards: [{ es, it, syn?, type? }]. Con opts.deck l'esito aggiorna anche il mazzo (ripasso a intervalli).
+  // cards: [{ es, it, syn?, type? }]. Direzioni: 'it-es' (si legge l'italiano e si scrive la parola spagnola),
+  // 'es-it' (si legge la parola spagnola e si scrive il significato in italiano), 'mix' (a caso, carta per carta).
+  // Con opts.deck l'esito aggiorna anche il mazzo (ripasso a intervalli).
   function runTest(area, cards, opts) {
     var idx = 0, results = [];
+    cards.forEach(function (c) { c.dir = opts.dir === 'mix' ? (Math.random() < 0.5 ? 'it-es' : 'es-it') : opts.dir; });
     var bar = el('div', 'progressbar'), fill = el('i'); bar.appendChild(fill);
     var box = el('div');
     area.appendChild(bar); area.appendChild(box);
+
+    function expected(card) { return card.dir === 'es-it' ? card.it : card.es; }
 
     function ask() {
       SP.clear(box);
       fill.style.width = Math.round(100 * idx / cards.length) + '%';
       if (idx >= cards.length) { finish(); return; }
-      var card = cards[idx];
+      var card = cards[idx], toIt = card.dir === 'es-it';
       var c = el('div', 'card q');
       c.appendChild(el('div', 'muted', 'Parola ' + (idx + 1) + ' di ' + cards.length));
-      c.appendChild(el('div', 'stem', card.it));
-      c.appendChild(el('div', 'muted', 'Scrivi la parola in spagnolo' + (card.type ? ' (' + card.type + ')' : '') + '. Valgono anche i sinonimi.'));
+      var stem = el('div', 'stem', toIt ? card.es : card.it);
+      if (toIt) { stem.appendChild(document.createTextNode(' ')); stem.appendChild(SP.speakButton(card.es)); }
+      c.appendChild(stem);
+      c.appendChild(el('div', 'muted', (toIt ? 'Scrivi il significato in italiano (ne basta uno valido)' : 'Scrivi la parola in spagnolo') + (card.type ? ' (' + card.type + ')' : '') + '. Valgono anche i sinonimi.'));
       var inp = el('input'); inp.type = 'text'; inp.autocomplete = 'off'; inp.autocapitalize = 'off'; inp.spellcheck = false;
-      inp.placeholder = 'La parola in spagnolo'; inp.style.marginTop = '8px';
+      inp.placeholder = toIt ? 'Il significato in italiano' : 'La parola in spagnolo'; inp.style.marginTop = '8px';
       c.appendChild(inp);
       var verdict = el('div');
       var row = el('div', 'row'); row.style.marginTop = '8px';
@@ -125,18 +132,19 @@
         var given = inp.value.trim();
         if (!given) return;
         answered = true; inp.disabled = true; skip.style.display = 'none';
-        var exact = SP.compare(given, card.es, [], { articles: true });
-        var any = exact !== 'no' ? exact : SP.compare(given, card.es, card.syn || [], { articles: true });
+        var exact = SP.compare(given, expected(card), [], { articles: true });
+        // I sinonimi noti ci sono solo per le parole spagnole; per il significato in italiano conta l'elenco delle traduzioni.
+        var any = exact !== 'no' ? exact : (toIt ? 'no' : SP.compare(given, card.es, card.syn || [], { articles: true }));
         var rec = { card: card, given: given, ok: false, pending: false, note: '' };
         if (exact !== 'no') {
           rec.ok = true;
-          show('ok', exact === 'ok' ? 'Giusto! ' + card.es : 'Giusto, ma attento agli accenti: ' + card.es);
+          show('ok', exact === 'ok' ? 'Giusto! ' + expected(card) : 'Giusto, ma attento agli accenti: ' + expected(card));
         } else if (any !== 'no') {
           rec.ok = true; rec.note = 'sinonimo';
           show('ok', 'Giusto: «' + given + '» è un sinonimo.', 'La parola in elenco era «' + card.es + '».');
         } else {
           rec.pending = true;
-          show('warn', 'Non è la parola in elenco («' + card.es + '»), ma potrebbe essere un sinonimo valido.', 'Lo controllo alla fine del test.');
+          show('warn', 'Non è ' + (toIt ? 'il significato' : 'la parola') + ' in elenco («' + expected(card) + '»), ma potrebbe essere ' + (toIt ? 'una traduzione valida' : 'un sinonimo valido') + '.', 'Lo controllo alla fine del test.');
         }
         results.push(rec);
         btn.textContent = idx + 1 >= cards.length ? 'Vedi il risultato' : 'Avanti';
@@ -146,7 +154,7 @@
         if (answered) return;
         answered = true; inp.disabled = true; skip.style.display = 'none';
         results.push({ card: card, given: '', ok: false, pending: false, note: '' });
-        show('ko', 'La parola era: ' + card.es);
+        show('ko', (toIt ? 'Il significato era: ' : 'La parola era: ') + expected(card));
         btn.textContent = idx + 1 >= cards.length ? 'Vedi il risultato' : 'Avanti';
         btn.focus();
       });
@@ -160,7 +168,7 @@
       var pend = results.filter(function (r) { return r.pending; });
       var wait = pend.length ? SP.loading(box, 'Il tutor controlla le risposte che non coincidevano con l\'elenco…') : null;
       var graded = pend.length
-        ? SP.call({ action: 'grade_vocab', items: pend.map(function (r) { return { it: r.card.it, es: r.card.es, type: r.card.type || '', answer: r.given }; }) })
+        ? SP.call({ action: 'grade_vocab', items: pend.map(function (r) { return { it: r.card.it, es: r.card.es, type: r.card.type || '', answer: r.given, dir: r.card.dir }; }) })
         : Promise.resolve({ results: [] });
       graded.then(function (g) {
         if (wait) wait();
@@ -184,10 +192,10 @@
       c.appendChild(el('div', 'muted', correct === cards.length ? 'Test perfetto!' : correct >= cards.length * 0.7 ? 'Buon lavoro: ripassa le parole sbagliate.' : 'Rivedi le parole sbagliate: torneranno presto.'));
       var accepted = results.filter(function (r) { return r.ok && r.note; });
       if (accepted.length) {
-        c.appendChild(el('h3', '', 'Risposte accettate come sinonimi'));
+        c.appendChild(el('h3', '', 'Risposte accettate come sinonimi o traduzioni'));
         accepted.forEach(function (r) {
-          var d = el('div', 'mist');
-          d.appendChild(el('span', 'r', r.given)); d.appendChild(document.createTextNode(' per «' + r.card.it + '» (in elenco: ' + r.card.es + ')'));
+          var d = el('div', 'mist'), toIt = r.card.dir === 'es-it';
+          d.appendChild(el('span', 'r', r.given)); d.appendChild(document.createTextNode(' per «' + (toIt ? r.card.es : r.card.it) + '» (in elenco: ' + expected(r.card) + ')'));
           if (r.fromTutor && r.note) d.appendChild(el('div', 'muted', r.note));
           c.appendChild(d);
         });
@@ -198,7 +206,7 @@
         wrong.forEach(function (r) {
           var d = el('div', 'mist');
           if (r.given) { d.appendChild(el('span', 'w', r.given)); d.appendChild(document.createTextNode(' → ')); }
-          d.appendChild(el('span', 'r', r.card.es)); d.appendChild(document.createTextNode(' (' + r.card.it + ')'));
+          d.appendChild(el('span', 'r', r.card.es)); d.appendChild(document.createTextNode(' = ' + r.card.it));
           if (r.note) d.appendChild(el('div', 'muted', r.note));
           c.appendChild(d);
         });
@@ -217,6 +225,30 @@
     ask();
   }
 
+  // Scelta della direzione, poi il test.
+  function chooseDirection(area, cards, opts) {
+    var c = el('div', 'card');
+    c.appendChild(el('h3', '', 'Come vuoi essere interrogato?'));
+    c.appendChild(el('p', 'muted', cards.length + ' parole. Anche i sinonimi sono accettati.'));
+    var saved = SP.pref('vocab_dir');
+    [['it-es', 'Leggo l\'italiano, scrivo la parola in spagnolo', 'Il più impegnativo: devi ricordare la parola.'],
+     ['es-it', 'Leggo la parola in spagnolo, scrivo il significato in italiano', 'Più facile: serve a riconoscere le parole.'],
+     ['mix', 'Mescolato', 'Una domanda in un verso, una nell\'altro.']].forEach(function (x) {
+      var b = el('button', 'tile', '');
+      if (saved === x[0]) { b.style.borderColor = 'var(--accent)'; b.style.boxShadow = '0 0 0 2px var(--accent-soft)'; }
+      b.style.width = '100%'; b.style.marginBottom = '8px'; b.style.cursor = 'pointer';
+      b.appendChild(el('div', '', x[1]));
+      b.appendChild(el('div', 'sub', x[2]));
+      b.addEventListener('click', function () {
+        SP.pref('vocab_dir', x[0]);
+        SP.clear(area);
+        runTest(area, cards, { deck: opts.deck, dir: x[0] });
+      });
+      c.appendChild(b);
+    });
+    area.appendChild(c);
+  }
+
   function testPage(root, mode) {
     var page = el('div', 'page');
     var back = el('a', 'back', '← Vocabolario'); back.href = '#/vocabolario';
@@ -229,15 +261,14 @@
     if (mode.indexOf('test:') === 0) {                      // test su un tema, senza toccare il mazzo
       SP.call({ action: 'vocab', theme: mode.slice(5) }).then(function (r) {
         done();
-        var cards = SP.shuffle(r.words).slice(0, 10);
-        runTest(area, cards, { deck: false });
+        chooseDirection(area, SP.shuffle(r.words).slice(0, 10), { deck: false });
       }).catch(function (e) { done(); area.appendChild(el('div', 'err', e.message)); });
       return;
     }
     SP.call({ action: 'deck', limit: 20 }).then(function (r) {   // test del mazzo: parole da verificare oggi
       done();
       if (!r.due.length) { area.appendChild(el('div', 'card', 'Nessuna parola da verificare adesso. Torna domani o aggiungi nuove parole.')); return; }
-      runTest(area, SP.shuffle(r.due), { deck: true });
+      chooseDirection(area, SP.shuffle(r.due), { deck: true });
     }).catch(function (e) { done(); area.appendChild(el('div', 'err', e.message)); });
   }
 
