@@ -1,7 +1,7 @@
 # Elenco di controllo prima di un deploy su Netlify
 
 Ogni deploy costa 15 crediti (piano gratuito: 300 al mese). Spagnolo e portoghese sono due progetti separati: pubblicarli entrambi costa 30.
-Il lavoro quotidiano (commit e push) va sul ramo `dev` e non costa nulla. Si pubblica solo da `main`, a mano.
+Si lavora direttamente su `main`: commit e push non costano nulla perché i deploy automatici sono fermi. Si pubblica solo a mano, dalla console Netlify.
 
 ## 1. Prima di decidere di pubblicare
 
@@ -17,22 +17,9 @@ Il lavoro quotidiano (commit e push) va sul ramo `dev` e non costa nulla. Si pub
 - [ ] Variabili d'ambiente impostate **prima** del deploy, altrimenti ne serve un secondo: `ANTHROPIC_API_KEY`, `SESSION_SECRET` (almeno 32 caratteri), `SETUP_TOKEN`; facoltativa `PUBLIC_URL`.
 - [ ] Dopo il deploy: aprire `/setup.html` con il `SETUP_TOKEN` per creare l'amministratore, poi togliere il token.
 
-## 3. Portare `dev` su `main`
+## 3. Codice su GitHub
 
-Dalla cartella del progetto:
-
-```sh
-git checkout dev
-git pull origin dev
-git push origin dev
-git checkout main
-git pull origin main
-git merge dev
-git push origin main
-git checkout dev
-```
-
-- [ ] `git status` pulito e nessun conflitto nell'unione.
+- [ ] Commit e push fatti su `main` (`git status` pulito, `git log origin/main -1` mostra l'ultima modifica).
 - [ ] Il push su `main` **non** deve avviare un deploy (i deploy automatici sono fermi). Se su Netlify compare un deploy che non hai lanciato tu, ferma i deploy automatici nelle impostazioni di build.
 
 ## 4. Il deploy

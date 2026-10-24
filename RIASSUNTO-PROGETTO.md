@@ -10,16 +10,16 @@ Esiste una "fotocopia" per il **portoghese del Brasile** con la stessa struttura
 | | Spagnolo | Portoghese |
 | --- | --- | --- |
 | Cartella | `C:\Users\salva\SpanishTutor` | `C:\Users\salva\PortugueseTutor` |
-| Ramo di lavoro | `dev` (push su `origin/dev`; per pubblicare si unisce in `main`) | `dev` (come lo spagnolo; si pubblica da `main`) |
+| Ramo di lavoro | `main` (ramo `dev` unito e non più usato) | `main` |
 | Netlify | sito già attivo, ma **non si fa deploy per ora** (deploy automatici fermati) | collegato, ma deploy automatici fermati: si pubblica solo a mano |
 
 Esiste anche una vecchia versione PHP per NAS nella cartella `spagnolo/`: non è più sviluppata e ha bug noti, non si tocca.
 
 ## Regole di lavoro stabilite dall'utente
 
-- **Nessun deploy su Netlify** per lo spagnolo finché l'utente non lo decide. Il piano gratuito ha 300 crediti e ogni deploy ne costa 15. Quando sarà il momento: unire `dev` in `main` e fare **un solo deploy manuale**. I deploy automatici sono già fermati.
-- Il portoghese è collegato a Netlify ma con deploy automatici fermati: il push su GitHub non pubblica nulla. Anche lì si lavora su `dev` e si pubblica da `main`. Elenco di controllo prima di ogni deploy: `ELENCO-DEPLOY.md`. Quando si pubblicherà, verificare **prima** le variabili d'ambiente per non sprecare deploy (i passaggi sono nel README).
-- L'utente chiede quasi sempre commit e push dopo ogni modifica: entrambi i progetti su `dev`. Ogni modifica va fatta in entrambe le versioni, adattando la lingua.
+- **Nessun deploy su Netlify** per lo spagnolo finché l'utente non lo decide. Il piano gratuito ha 300 crediti e ogni deploy ne costa 15. Quando sarà il momento: fare **un solo deploy manuale** dalla console Netlify (Trigger deploy), il codice è già su `main`. I deploy automatici sono già fermati.
+- Il portoghese è collegato a Netlify ma con deploy automatici fermati: il push su GitHub non pubblica nulla. Anche lì si lavora su `main`. Elenco di controllo prima di ogni deploy: `ELENCO-DEPLOY.md`. Quando si pubblicherà, verificare **prima** le variabili d'ambiente per non sprecare deploy (i passaggi sono nel README).
+- L'utente chiede quasi sempre commit e push dopo ogni modifica: entrambi i progetti su `main` (il ramo `dev` è stato unito il 24/10 e non si usa più). Ogni modifica va fatta in entrambe le versioni, adattando la lingua.
 - I messaggi di commit sono in italiano (in portoghese per la copia PT) e finiscono con `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>`.
 - Si risponde in italiano. L'utente è sbrigativo: preferisce risultati verificati e un riepilogo onesto di limiti e cose non provate.
 - Non creo account né password per conto dell'utente (ho rifiutato la richiesta di un utente guest con password data in chat; gli ho dato i comandi per farlo da solo).
@@ -53,7 +53,7 @@ Azioni principali: `chat, hint, grammar, exercises, grade, record_exercise, voca
 1. App iniziale per NAS (PHP), poi con sezioni, accessi autonomi su invito, test di livello con piano di 8 settimane, home page, conversazione migliorata (variata, con stop, suggerimenti in spagnolo).
 2. Migrazione su Netlify + GitHub (sito attivo, setup fatto).
 3. Copia per il portoghese brasiliano su GitHub.
-4. Modifiche allo spagnolo su `dev`:
+4. Modifiche allo spagnolo (fatte sul ramo `dev`, ora unito in `main`):
    - **Vocabolario come test di scrittura** nei due versi (si legge la parola italiana e si scrive la spagnola, o viceversa), con sinonimi accettati (valutati da Claude). Parole vere nella demo. *Non riportato nella copia portoghese.*
    - **Verbi**: corretto "ir" (parse a partire da 2 lettere). Un verbo non in elenco non si coniuga più alla cieca: si propongono verbi simili e il tutor controlla se esiste e se è regolare (`verb_check`, risultato in cache per tutti). La pagina iniziale mostra i verbi irregolari importanti in ordine alfabetico e i sei tempi principali dei tre modelli regolari (hablar, comer, vivir).
    - **Allenamento verbi**: accanto al tempo compare il nome italiano (es. «Pretérito indefinido (passato remoto)»), poi la forma italiana della persona e del tempo (es. «tu ci entrasti»), chiesta al tutor una volta per serie (`verb_italian`, in cache).
@@ -79,4 +79,4 @@ Azioni principali: `chat, hint, grammar, exercises, grade, record_exercise, voca
 
 - Riportare nel portoghese il vocabolario come test di scrittura.
 - Provare tutto con il vero Claude (`netlify dev`), quando Node sarà disponibile.
-- Quando l'utente decide: unire `dev` in `main` e fare un solo deploy dello spagnolo; poi, più avanti, pubblicare il portoghese.
+- Quando l'utente decide: fare un solo deploy dello spagnolo dalla console Netlify; poi, più avanti, pubblicare il portoghese.
