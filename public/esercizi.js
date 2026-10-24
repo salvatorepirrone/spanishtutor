@@ -104,7 +104,7 @@
         if (it.type === 'completa') {
           // Una casella per ogni spazio ___: con più spazi la risposta attesa è "prima / seconda" e si confronta una per una.
           var blanks = (it.q.match(/___/g) || []).length;
-          var parts = it.answer.split(/\s*[\/;]\s*/).filter(Boolean);
+          var parts = it.answer.split(blanks > 1 ? /\s*[\/;,]\s*/ : /\s*[\/;]\s*/).filter(Boolean);
           var multi = blanks > 1 && parts.length === blanks;
           var inps = [];
           for (var k = 0; k < (multi ? blanks : 1); k++) {
@@ -123,7 +123,8 @@
               r = rs.indexOf('no') >= 0 ? 'no' : (rs.indexOf('accent') >= 0 ? 'accent' : 'ok');
               if (r === 'no') r = SP.compare(vals.join(' / '), it.answer, it.alts);   // combinazioni alternative indicate dal tutor
             } else {
-              r = SP.compare(vals[0], it.answer, (it.alts || []).concat(parts.length > 1 ? parts : []));
+              var sepless = function (x) { return blanks > 1 ? x.replace(/\s*[\/;,]\s*/g, ' / ') : x; };   // con più spazi "a, b" e "a / b" sono la stessa risposta
+              r = SP.compare(sepless(vals[0]), sepless(it.answer), (it.alts || []).concat(parts.length > 1 ? parts : []));
             }
             st.answered = true; st.given = vals.join(' / '); st.ok = r !== 'no';
             inps.forEach(function (x) { x.disabled = true; }); chk.disabled = true;
