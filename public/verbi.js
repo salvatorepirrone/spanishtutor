@@ -245,8 +245,30 @@
       err.textContent = '';
       var verbs = pool.value === 'one' ? [onlyVerb] : pool.value === 'all' ? SPV.list() : SPV.irregularTop;
       SP.clear(run);
-      practice(run, buildQuestions(verbs, tenses, parseInt(n.value, 10)));
+      var qs = buildQuestions(verbs, tenses, parseInt(n.value, 10));
+      var stop = SP.loading(run, 'Preparo le frasi in italiano…');
+      italianForms(qs).catch(function () {}).then(function () { stop(); practice(run, qs); });
       card.style.display = 'none';
+    });
+  }
+
+  // Aggiunge a ogni domanda la forma italiana (per esempio «tu ci entrasti») chiedendola al tutor: una sola richiesta per serie, e le
+  // forme già note vengono dalla cache del server. Se il tutor non risponde l'allenamento funziona lo stesso, senza la riga italiana.
+  function italianForms(qs) {
+    var pairs = [], index = {};
+    qs.forEach(function (q) {
+      var k = q.inf + '|' + q.tenseKey;
+      if (index[k] !== undefined) return;
+      var t = TENSES.filter(function (x) { return x.key === q.tenseKey; })[0];
+      var list = (q.tenseKey === 'impAfirmativo' || q.tenseKey === 'impNegativo') ? SPV.IMP_PERSONS : SPV.PERSONS;
+      index[k] = pairs.length;
+      pairs.push({ inf: q.inf, tense: q.tenseKey, tenseIt: TENSE_IT[q.tenseKey] || t.label, it: q.it || '', persons: list.slice(0, t.n) });
+    });
+    return SP.call({ action: 'verb_italian', pairs: pairs.slice(0, 20) }).then(function (r) {
+      qs.forEach(function (q) {
+        var i = index[q.inf + '|' + q.tenseKey], item = i < 20 && r.items[i];
+        if (item && item.forms && item.forms[q.personIdx]) q.itForm = item.forms[q.personIdx];
+      });
     });
   }
 
@@ -262,7 +284,7 @@
       if (seen[key]) continue;
       seen[key] = true;
       var person = (tk === 'impAfirmativo' || tk === 'impNegativo') ? SPV.IMP_PERSONS[i] : SPV.PERSONS[i];
-      qs.push({ inf: v, it: c.it, tense: tenseName(t), person: person, answer: c[tk][i], irregular: c.irregular[tk][i] });
+      qs.push({ inf: v, it: c.it, tense: tenseName(t), tenseKey: tk, personIdx: i, person: person, answer: c[tk][i], irregular: c.irregular[tk][i] });
     }
     return qs;
   }
@@ -285,6 +307,7 @@
       stem.appendChild(document.createTextNode(' · ' + q.tense + ' · '));
       stem.appendChild(el('b', '', q.person));
       card.appendChild(stem);
+      if (q.itForm) { var itf = el('div', 'stem', '«' + q.itForm + '»'); itf.style.marginTop = '4px'; card.appendChild(itf); }
       if (q.it) card.appendChild(el('div', 'muted', q.it));
       var inp = el('input'); inp.type = 'text'; inp.autocomplete = 'off'; inp.autocapitalize = 'off'; inp.spellcheck = false;
       inp.placeholder = 'Scrivi la forma';

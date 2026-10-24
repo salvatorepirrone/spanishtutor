@@ -118,6 +118,9 @@ export function fakeClaude(counter, opts = {}) {
         { type: 'scelta', q: `Mi hermana ___ médica ${stamp}.`, options: ['es', 'está', 'hay', 'tiene'], answer: 0, why: 'ser' },
       ] };
     } else if (sys.includes('Valuta traduzioni')) payload = { results: JSON.parse(b.messages[0].content).map((x, i) => ({ ok: i === 0, corrected: x.ref, note: 'nota' })) };
+    else if (sys.includes('forme coniugate del verbo')) {
+      payload = { results: JSON.parse(b.messages[0].content).map((x) => ({ i: x.i, forms: x.persons.map((p) => p + ' ' + x.inf + ' (it)') })) };
+    }
     else if (sys.includes('ha cercato un verbo')) {
       const w = b.messages[0].content.replace('Parola cercata: ', '');
       payload = w === 'ablar' ? { exists: false, it: '', regular: false, note: 'Probabile errore di battitura.', suggestions: ['hablar', 'ablandar'] }
@@ -298,6 +301,14 @@ export async function run({ iterations = 1000 } = {}) {
   ok(r.status === 200 && !r.json.exists && r.json.suggestions[0] === 'hablar' && r.json.regular === false, 'verb_check: verbo inesistente con suggerimenti', JSON.stringify(r.json));
   r = await call('POST', '/api', { cookie: S, body: { action: 'verb_check', inf: 'irregolarar' } });
   ok(r.status === 200 && r.json.exists && !r.json.regular, 'verb_check: verbo esistente ma irregolare');
+  const vp = [{ inf: 'caber', tense: 'indefinido', tenseIt: 'passato remoto', it: 'starci', persons: ['yo', 'tú', 'él', 'nosotros', 'vosotros', 'ellos'] }];
+  r = await call('POST', '/api', { cookie: S, body: { action: 'verb_italian', pairs: vp } });
+  ok(r.status === 200 && r.json.items[0].forms.length === 6 && r.json.items[0].forms[1].includes('(it)'), 'verb_italian: forme italiane per tutte le persone', JSON.stringify(r.json));
+  const before2 = counter.n;
+  r = await call('POST', '/api', { cookie: S, body: { action: 'verb_italian', pairs: vp } });
+  ok(r.status === 200 && r.json.items[0].forms.length === 6 && counter.n === before2, 'verb_italian: la seconda richiesta viene dalla cache');
+  r = await call('POST', '/api', { cookie: S, body: { action: 'verb_italian', pairs: [{ inf: 'casa', tense: 'indefinido', persons: ['yo'] }] } });
+  ok(r.status === 400, 'verb_italian: infinito non valido rifiutato');
   r = await call('POST', '/api', { cookie: S, body: { action: 'verb_check', inf: 'casa' } });
   ok(r.status === 400, 'verb_check: parola che non è un infinito rifiutata');
   r = await call('POST', '/api', { cookie: S, body: { action: 'grade_vocab', items: [] } });

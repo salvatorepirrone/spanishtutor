@@ -94,7 +94,7 @@ un server statico, da una pagina del browser:
 
 ```js
 const m = await import('/netlify/test/backend.test.mjs');
-console.log(await m.run());   // { failures: 0, total: 81, ... }
+console.log(await m.run());   // { failures: 0, total: 84, ... }
 ```
 
 ## Limiti da conoscere
