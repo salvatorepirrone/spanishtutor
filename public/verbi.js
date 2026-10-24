@@ -52,15 +52,37 @@
       var p = SPV.parse(arg);
       if (p) { input.value = p.inf; show(area, p); } else area.appendChild(el('div', 'err', 'Verbo non valido.'));
     } else {
-      area.appendChild(el('div', 'sec-title', 'Tutti i verbi dell\'elenco'));
-      var all = el('div', 'chipsrow');
-      SPV.list().forEach(function (v) {
-        var b = el('button', 'small chipv', v);
-        b.addEventListener('click', function () { setHash(v); });
-        all.appendChild(b);
-      });
-      area.appendChild(all);
+      regularModels(area);
     }
+  }
+
+  // Pagina iniziale: i tempi principali dei tre modelli regolari (-ar, -er, -ir) affiancati.
+  var MODELS = ['hablar', 'comer', 'vivir'], MODEL_TENSES = ['presente', 'indefinido', 'imperfecto', 'futuro', 'condicional', 'subjPresente'];
+  function regularModels(area) {
+    var cs = MODELS.map(function (v) { return SPV.full(v); });
+    area.appendChild(el('div', 'sec-title', 'I tre modelli regolari: ' + MODELS.join(' · ')));
+    var grid = el('div', 'tgrid'); area.appendChild(grid);
+    MODEL_TENSES.forEach(function (k) {
+      var t = TENSES.filter(function (x) { return x.key === k; })[0];
+      if (!t) return;
+      var card = el('div', 'card tense');
+      var title = el('h3', '', t.label); title.style.marginTop = '0';
+      card.appendChild(title);
+      card.appendChild(el('div', 'muted', t.use));
+      var tb = el('table', 'conj'), head = el('tr'), body = el('tbody');
+      head.appendChild(el('th'));
+      MODELS.forEach(function (v) { head.appendChild(el('th', '', v)); });
+      body.appendChild(head);
+      cs[0][k].forEach(function (x, i) { var p = SPV.PERSONS[i];
+        var tr = el('tr');
+        tr.appendChild(el('td', 'pn', p));
+        cs.forEach(function (c) { tr.appendChild(el('td', '', c[k][i])); });
+        body.appendChild(tr);
+      });
+      tb.appendChild(body); card.appendChild(tb);
+      grid.appendChild(card);
+    });
+    area.appendChild(el('p', 'muted', 'Cerca un verbo o scegli un irregolare qui sopra per vedere tutti i tempi.'));
   }
 
   // ---------------------------------------------------------------- tabelle
