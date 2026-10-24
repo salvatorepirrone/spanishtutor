@@ -239,13 +239,29 @@ export async function lesson(ctx, inp) {
 
 // ---------------------------------------------------------------- esercizi
 
-export function cleanItems(items, types, max) {
+// Tra parentesi, nelle frasi di scelta e completamento, ci può stare solo l'infinito del verbo da coniugare o un'indicazione
+// di persona/genere/numero: una parola qualunque (per esempio "la posta (correos)") è una glossa finita per errore nella frase.
+const HINT_WORDS = new Set(['yo', 'tú', 'tu', 'él', 'el', 'ella', 'usted', 'nosotros', 'nosotras', 'vosotros', 'vosotras', 'ellos', 'ellas', 'ustedes',
+  'eu', 'você', 'voce', 'ele', 'nós', 'nos', 'vocês', 'voces', 'eles', 'elas', 'a gente', 'singular', 'plural', 'masculino', 'femenino', 'feminino', 'masculina', 'femenina', 'feminina']);
+export function suspiciousHint(q) {
+  for (const m of String(q).matchAll(/\(([^)]*)\)/g)) {
+    const parts = m[1].toLowerCase().split(/[,;/]/).map((x) => x.trim()).filter(Boolean);
+    for (const p of parts) {
+      if (HINT_WORDS.has(p) || /\s/.test(p) || /(ar|er|ir|ír|ôr|or)(-?se)?$/.test(p)) continue;
+      return true;
+    }
+  }
+  return false;
+}
+
+export function cleanItems(items, types, max, strictHints = false) {
   const out = [];
   for (const it of items) {
     if (!it || typeof it !== 'object' || out.length >= max) continue;
     const type = String(it.type || '');
     const q = str(it.q, 400);
     if (!q || !types.includes(type)) continue;
+    if (strictHints && type !== 'traduci' && suspiciousHint(q)) continue;
     const why = str(it.why, 400);
     let item;
     if (type === 'scelta') {
@@ -298,7 +314,7 @@ export async function exercises(ctx, inp) {
     + '{"items":[{"type":"scelta","q":"frase con ___ al posto del vuoto","options":["a","b","c","d"],"answer":0,"why":"spiegazione breve in italiano"},'
     + '{"type":"completa","q":"frase con ___ e, tra parentesi, il verbo o la parola base da coniugare/adattare","answer":"forma corretta (se la frase ha più spazi ___: le risposte in ordine, separate da ' / ')","alts":["altre forme accettabili"],"why":"..."},'
     + '{"type":"traduci","q":"frase da tradurre in spagnolo, in italiano","ref":"traduzione spagnola di riferimento","why":"punto di grammatica in gioco"}]}'
-    + '\nRegole: "answer" nei tipi scelta è l\'indice (0-3) della risposta corretta: variane la posizione; una sola risposta giusta per gli esercizi di scelta e distrattori plausibili; frasi realistiche e brevi, tutte diverse tra loro; niente doppie soluzioni nei completamenti (se ce ne sono, mettile in alts); \'why\' spiega la regola in una frase.';
+    + '\nRegole: "answer" nei tipi scelta è l\'indice (0-3) della risposta corretta: variane la posizione; una sola risposta giusta per gli esercizi di scelta e distrattori plausibili; frasi realistiche e brevi, tutte diverse tra loro; niente doppie soluzioni nei completamenti (se ce ne sono, mettile in alts); \'why\' spiega la regola in una frase. Le frasi di scelta e completa sono interamente in spagnolo: mai parole italiane né glosse tra parentesi (tra parentesi solo l\'infinito del verbo da coniugare o il pronome); \'why\' spiega la regola in italiano e non commenta né corregge mai la frase dell\'esercizio: se ti accorgi di un errore nella frase, riscrivi l\'esercizio.';
   // Varietà: contesti e persone a caso, e le frasi già proposte da non ripetere.
   const recent = recentOf(d).items;
   const avoid = recent.slice(-40);
@@ -307,7 +323,7 @@ export async function exercises(ctx, inp) {
     + (avoid.length ? '\nFrasi già proposte di recente: NON ripeterle né riformularle:\n- ' + avoid.join('\n- ') : '');
   const extra = n + 2;
   const j = await claudeJson(ctx, system, `Crea ${extra} esercizi: ${typeText}.\nArgomento: ${what}` + seed, 4000, 100);
-  let items = cleanItems(Array.isArray(j.items) ? j.items : [], kind === 'misti' ? ['scelta', 'completa', 'traduci'] : [kind], extra);
+  let items = cleanItems(Array.isArray(j.items) ? j.items : [], kind === 'misti' ? ['scelta', 'completa', 'traduci'] : [kind], extra, true);
   items = dropRepeats(items, recent).slice(0, n);
   if (items.length < 3) throw new HttpError(502, 'Esercizi non utilizzabili, riprova.');
   await updateData(ctx.store, ctx.user, (dd) => remember(dd, [], items.map((i) => i.q)));

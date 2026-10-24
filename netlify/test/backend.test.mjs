@@ -105,6 +105,7 @@ export function fakeClaude(counter, opts = {}) {
     else if (sys.includes('Crea esercizi')) {
       const stamp = counter.n;
       payload = { items: [
+        { type: 'completa', q: `Esta mañana en la posta (correos) tú me ___ (decir) algo ${stamp}.`, answer: 'dijiste', alts: [], why: 'glossa nella frase' },
         { type: 'scelta', q: `Ayer ___ al mercado ${stamp}.`, options: ['fui', 'iba', 'voy', 'iré'], answer: 0, why: 'indefinido' },
         { type: 'completa', q: `Yo ___ (hacer) la compra ${stamp}.`, answer: 'hago', alts: [], why: 'yo' },
         { type: 'traduci', q: `Vado al mercato ${stamp}.`, ref: 'Voy al mercado.', why: 'ir' },
@@ -257,6 +258,7 @@ export async function run({ iterations = 1000 } = {}) {
 
   r = await call('POST', '/api', { cookie: S, body: { action: 'exercises', topic: 'mix', kind: 'misti', n: 6 } });
   ok(r.status === 200 && r.json.items.length === 6, 'esercizi: 6 richiesti, 6 consegnati', JSON.stringify(r.json).slice(0, 150));
+  ok(!r.json.items.some((i) => /posta/.test(i.q)), 'esercizi: una glossa tra parentesi nella frase fa scartare l\'esercizio');
   const ex1 = r.json.items;
   const sc = ex1.find((i) => i.type === 'scelta');
   ok(sc && sc.options[sc.answer] !== undefined && ['fui', 'estamos', 'llegan', 'es'].includes(sc.options[sc.answer]), 'scelta: indice della risposta coerente dopo il rimescolamento');
