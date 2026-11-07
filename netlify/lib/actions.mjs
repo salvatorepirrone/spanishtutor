@@ -489,6 +489,51 @@ export async function deckReviewMany(ctx, inp) {
   return { found, stats: stats(d, ctx.now) };
 }
 
+// ---------------------------------------------------------------- feedback degli utenti
+// Segnalazioni scritte da chi usa il sito: restano in un registro (al massimo 500 voci) che l'amministratore legge dalla pagina Accessi.
+// Non chiamano Claude e quindi non contano nel limite giornaliero; per evitare abusi ognuno può inviarne 20 al giorno.
+const FEEDBACK_KEY = 'feedback/log';
+const FEEDBACK_KINDS = ['errore', 'idea', 'contenuto', 'altro'];
+
+export async function feedback(ctx, inp) {
+  const text = str(inp.text, 2000).trim();
+  if (text.length < 3) throw new HttpError(400, 'Scrivi qualche parola in più.');
+  const day = today(ctx.now);
+  const entry = {
+    id: ctx.now.getTime().toString(36) + Math.random().toString(36).slice(2, 6), t: ctx.now.toISOString(), user: ctx.user,
+    role: (ctx.userRec && ctx.userRec.role) || 'user', kind: FEEDBACK_KINDS.includes(inp.kind) ? inp.kind : 'altro',
+    page: str(inp.page, 80), device: str(inp.device, 120), text, status: 'nuovo',
+  };
+  await ctx.store.update(FEEDBACK_KEY, { items: [] }, (cur) => {
+    const items = Array.isArray(cur.items) ? cur.items : [];
+    if (items.filter((x) => x.user === ctx.user && today(new Date(x.t)) === day).length >= 20) throw new HttpError(429, 'Hai già inviato molte segnalazioni oggi: riprova domani.');
+    items.push(entry);
+    return { items: items.slice(-500) };
+  });
+  return { ok: true };
+}
+
+function requireAdmin(ctx) {
+  if (!ctx.userRec || ctx.userRec.role !== 'admin') throw new HttpError(403, 'Riservato agli amministratori.');
+}
+
+export async function feedbackList(ctx) {
+  requireAdmin(ctx);
+  const log = await ctx.store.read(FEEDBACK_KEY, { items: [] });
+  return { items: (Array.isArray(log.items) ? log.items : []).slice().reverse() };
+}
+
+export async function feedbackSet(ctx, inp) {
+  requireAdmin(ctx);
+  const id = str(inp.id, 40), status = inp.status === 'fatto' ? 'fatto' : 'nuovo';
+  await ctx.store.update(FEEDBACK_KEY, { items: [] }, (cur) => {
+    const items = Array.isArray(cur.items) ? cur.items : [];
+    for (const x of items) if (x.id === id) x.status = status;
+    return { items };
+  });
+  return feedbackList(ctx);
+}
+
 // Forma italiana di un verbo a un dato tempo e persona (per l'allenamento sui verbi): una chiamata per tutte le voci mancanti,
 // il risultato resta in cache per tutti (una voce = un verbo e un tempo, con le forme di tutte le persone).
 export async function verbItalian(ctx, inp) {
@@ -620,5 +665,5 @@ export async function testResult(ctx, inp) {
 
 export const ACTIONS = {
   chat, hint, grammar: lesson, exercises, grade, record_exercise: recordExercise, vocab, deck_add: deckAddAction, deck: deckList,
-  deck_review: deckReview, deck_review_many: deckReviewMany, grade_vocab: gradeVocab, verb_check: verbCheck, verb_italian: verbItalian, profile_set: profileSet, test, writing, test_result: testResult,
+  deck_review: deckReview, deck_review_many: deckReviewMany, grade_vocab: gradeVocab, verb_check: verbCheck, feedback, feedback_list: feedbackList, feedback_set: feedbackSet, verb_italian: verbItalian, profile_set: profileSet, test, writing, test_result: testResult,
 };

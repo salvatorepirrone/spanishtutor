@@ -200,6 +200,37 @@ var Auth = (function () {
         tr.appendChild(c4);
         body.appendChild(tr);
       });
+
+    // feedback degli utenti
+    function loadFeedback(box) {
+      api('POST', '/api', { action: 'feedback_list' }).then(function (r) { drawFeedback(box, r.ok ? r.json.items : null, r.ok ? '' : (r.json.error || 'Non riesco a leggere i feedback.')); });
+    }
+    function drawFeedback(box, items, error) {
+      clear(box);
+      box.appendChild(el('h3', '', 'Feedback ricevuti'));
+      if (error) { box.appendChild(el('p', 'err', error)); return; }
+      var open = items.filter(function (x) { return x.status !== 'fatto'; });
+      box.appendChild(el('p', 'muted', open.length + ' da leggere, ' + (items.length - open.length) + ' già gestiti.'));
+      var copy = el('button', 'small', 'Copia quelli da leggere come testo');
+      copy.addEventListener('click', function () {
+        var t = open.map(function (x) { return '- [' + x.id + '] ' + new Date(x.t).toLocaleString('it-IT') + ' · ' + x.user + ' · ' + x.kind + ' · ' + x.page + '\n  ' + x.text.replace(/\n/g, '\n  '); }).join('\n');
+        (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(function () { copy.textContent = 'Copiato'; }, function () { window.prompt('Copia il testo:', t); });
+      });
+      box.appendChild(copy);
+      items.forEach(function (x) {
+        var d = el('div', 'fbitem' + (x.status === 'fatto' ? ' done' : ''));
+        d.appendChild(el('div', 'meta', new Date(x.t).toLocaleString('it-IT') + ' · ' + x.user + ' · ' + x.kind + ' · ' + x.page + (x.device ? ' · ' + x.device : '') + ' · id ' + x.id));
+        d.appendChild(el('div', 'txt', x.text));
+        var b = el('button', 'small', x.status === 'fatto' ? 'Riapri' : 'Segna come gestito');
+        b.addEventListener('click', function () {
+          api('POST', '/api', { action: 'feedback_set', id: x.id, status: x.status === 'fatto' ? 'nuovo' : 'fatto' }).then(function (r) { if (r.ok) drawFeedback(box, r.json.items, ''); });
+        });
+        d.appendChild(b);
+        box.appendChild(d);
+      });
+    }
+    var fbox = el('div', 'card'); m.appendChild(fbox);
+    loadFeedback(fbox);
     }
 
     function load() {

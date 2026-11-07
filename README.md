@@ -13,7 +13,7 @@ Il tutor è Claude, chiamato solo dal server: nessuna chiave nel browser né in 
 | Esercizi | Serie generate per argomento: scelta multipla, completa, traduci |
 | Grammatica | 44 argomenti in 7 sezioni, lezioni generate una volta e conservate |
 | Vocabolario | 16 temi con liste di parole e **test di scrittura** nei due versi (leggo l'italiano e scrivo la parola spagnola, oppure il contrario; i sinonimi valgono), mazzo personale con ripasso a intervalli |
-| Verbi | Coniugazione con le forme irregolari evidenziate (motore a regole, circa 270 verbi) e allenamento; per un verbo non in elenco il tutor controlla se esiste e se è regolare |
+| Verbi | Coniugazione con le forme irregolari evidenziate (motore a regole, circa 340 verbi) e allenamento; per un verbo non in elenco il tutor controlla se esiste e se è regolare |
 | Test | 20 domande + testo scritto, stima del livello e progressi |
 
 Al primo accesso c'è un test di ingresso (o la scelta del livello) e il tutor prepara un piano di 8 settimane.
@@ -94,7 +94,7 @@ un server statico, da una pagina del browser:
 
 ```js
 const m = await import('/netlify/test/backend.test.mjs');
-console.log(await m.run());   // { failures: 0, total: 87, ... }
+console.log(await m.run());   // { failures: 0, total: 93, ... }
 ```
 
 ## Limiti da conoscere
@@ -103,3 +103,11 @@ console.log(await m.run());   // { failures: 0, total: 87, ... }
   lezioni) ne usano 15-50 alla prima generazione, poi il risultato resta in cache.
 - Lezioni, liste di vocabolario ed esercizi sono generati da Claude e non sono riletti da un insegnante.
 - Il microfono richiede Chrome, Edge o Safari e una connessione a internet.
+
+## Feedback degli utenti
+
+In ogni pagina c'è il pulsante **💬 Feedback**: chi lo usa sceglie il tipo di segnalazione e scrive un testo; la pagina in cui si trova
+viene allegata. Le segnalazioni finiscono in un registro (Netlify Blobs, chiave `feedback/log`, al massimo 500 voci, 20 al giorno per persona,
+senza chiamare Claude). L'amministratore le legge in fondo alla pagina `/admin.html`, può segnarle come gestite e copiare quelle da leggere
+come testo (per incollarle in una chat con Claude Code). Il registro online non è raggiungibile da Claude senza un accesso da amministratore:
+va letto da lì.

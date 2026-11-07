@@ -263,6 +263,18 @@ export async function run({ iterations = 1000 } = {}) {
   ok(r.status === 200 && r.json.users.length === 2 && r.json.users.find((u) => u.user === 'guest').limit === 30, 'elenco utenti: guest con limite 30');
   r = await call('POST', '/api/admin/users', { cookie: jar.salvatore, body: { do: 'delete', user: 'salvatore' } });
   ok(r.status === 409, 'non puoi eliminarti');
+  r = await call('POST', '/api', { cookie: jar.guest, body: { action: 'feedback', kind: 'errore', text: 'Una risposta giusta è segnata sbagliata', page: '#/esercizi', device: '390x800' } });
+  ok(r.status === 200 && r.json.ok, 'feedback: un utente lo invia');
+  r = await call('POST', '/api', { cookie: jar.guest, body: { action: 'feedback', text: 'x' } });
+  ok(r.status === 400, 'feedback: testo troppo corto rifiutato');
+  r = await call('POST', '/api', { cookie: jar.guest, body: { action: 'feedback_list' } });
+  ok(r.status === 403, 'feedback: l\'elenco è solo per gli amministratori');
+  r = await call('POST', '/api', { cookie: jar.salvatore, body: { action: 'feedback_list' } });
+  ok(r.status === 200 && r.json.items.length === 1 && r.json.items[0].page === '#/esercizi' && r.json.items[0].status === 'nuovo', 'feedback: l\'amministratore lo legge', JSON.stringify(r.json));
+  r = await call('POST', '/api', { cookie: jar.salvatore, body: { action: 'feedback_set', id: r.json.items[0].id, status: 'fatto' } });
+  ok(r.status === 200 && r.json.items[0].status === 'fatto', 'feedback: segnato come gestito');
+  r = await call('POST', '/api', { cookie: jar.guest, body: { action: 'feedback_set', id: 'x', status: 'fatto' } });
+  ok(r.status === 403, 'feedback: solo l\'amministratore cambia lo stato');
   r = await call('POST', '/api/admin/users', { cookie: jar.salvatore, body: { do: 'role', user: 'salvatore', role: 'user' } });
   ok(r.status === 409, 'deve restare un admin');
   r = await call('POST', '/api/admin/users', { cookie: jar.salvatore, body: { do: 'limit', user: 'guest', limit: 2 } });

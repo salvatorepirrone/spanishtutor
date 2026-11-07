@@ -80,3 +80,9 @@ Azioni principali: `chat, hint, grammar, exercises, grade, record_exercise, voca
 - Riportare nel portoghese il vocabolario come test di scrittura.
 - Provare tutto con il vero Claude (`netlify dev`), quando Node sarà disponibile.
 - Quando l'utente decide: fare un solo deploy dello spagnolo dalla console Netlify; poi, più avanti, pubblicare il portoghese.
+
+## Aggiornamenti di novembre 2026
+
+- Lavoro su `main` per entrambi i progetti. Verbi: 346 nell'elenco (aggiunti reír, sonreír, freír, parecer e altri); pagina Verbi con irregolari in ordine alfabetico.
+- Esercizi: se dopo i filtri ne mancano rispetto al numero scelto, un secondo giro li integra.
+- **Feedback**: pulsante 💬 in ogni pagina, registro `feedback/log` (Blobs), elenco in `/admin.html` con «Copia quelli da leggere». Azioni `feedback`, `feedback_list`, `feedback_set`. L'elenco si legge solo da amministratore: Claude non può leggere il registro online da solo.
