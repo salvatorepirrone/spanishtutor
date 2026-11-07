@@ -309,6 +309,8 @@ export async function run({ iterations = 1000 } = {}) {
   r = await call('POST', '/api', { cookie: S, body: { action: 'exercises', topic: 'mix', kind: 'misti', n: 6 } });
   const repeated = r.json.items.filter((i) => ex1.some((j) => j.q === i.q));
   ok(r.status === 200 && repeated.length === 0, 'seconda serie senza frasi uguali alla prima', repeated.map((i) => i.q).join(' | '));
+  r = await call('POST', '/api', { cookie: S, body: { action: 'exercises', topic: 'mix', kind: 'misti', n: 12 } });
+  ok(r.status === 200 && r.json.items.length === 12, 'esercizi: se ne mancano dopo i filtri, un secondo giro porta la serie al numero richiesto', String(r.json.items && r.json.items.length));
   r = await call('POST', '/api', { cookie: S, body: { action: 'grade', items: [{ q: 'Vado al mercato.', ref: 'Voy al mercado.', answer: 'Voy al mercado' }, { q: 'x', ref: 'y', answer: '' }] } });
   ok(r.status === 200 && r.json.results.length === 2 && r.json.results[0].ok && !r.json.results[1].ok, 'grade: risultati nello stesso ordine');
   ok(r.json.results[0].score === 1 && r.json.results[1].score === 0.75, 'grade: punteggio decimale a passi di 0,25 (0,7 → 0,75)', JSON.stringify(r.json.results));

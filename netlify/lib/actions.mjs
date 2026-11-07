@@ -2,7 +2,7 @@
 import {
   CFG, DATA, HttpError, str, today, addDays, pickN, pickOne, shuffle, loadData, updateData, logActivity, addErrors, deckAdd, stats,
   topicById, vocabThemeById, profileOf, planOf, weekIndex, publicProfile, levelText, levelLabel, scenarios, grammar, remember, recentOf,
-  dropRepeats, pickTopic, LEVELS,
+  dropRepeats, normStem, pickTopic, LEVELS,
 } from './core.mjs';
 import { quotaHit, limitOf, usageToday } from './auth.mjs';
 
@@ -321,10 +321,22 @@ export async function exercises(ctx, inp) {
   const seed = '\nContesti da usare, uno per esercizio e variandoli (non limitarti a questi): ' + pickN(DATA.contexts, 5).join('; ') + '.'
     + '\nAlterna i soggetti (' + pickN(['yo', 'tú', 'él/ella/usted', 'nosotros', 'vosotros', 'ellos/ellas/ustedes'], 4).join(', ') + ') e i verbi, evita le frasi sul cinema e sugli amici se non strettamente utili.'
     + (avoid.length ? '\nFrasi già proposte di recente: NON ripeterle né riformularle:\n- ' + avoid.join('\n- ') : '');
-  const extra = n + 2;
-  const j = await claudeJson(ctx, system, `Crea ${extra} esercizi: ${typeText}.\nArgomento: ${what}` + seed, 4000, 100);
-  let items = cleanItems(Array.isArray(j.items) ? j.items : [], kind === 'misti' ? ['scelta', 'completa', 'traduci'] : [kind], extra, true);
-  items = dropRepeats(items, recent).slice(0, n);
+  // Alcuni esercizi vengono scartati (glosse nella frase, frasi già viste, formati sbagliati): se ne chiedono di più e, se ne mancano
+  // ancora, un secondo giro li integra. Il secondo giro parte solo se il primo è stato abbastanza rapido da stare nel limite di tempo.
+  const types = kind === 'misti' ? ['scelta', 'completa', 'traduci'] : [kind];
+  const extra = n + Math.max(3, Math.ceil(n / 2));
+  const t0 = Date.now();
+  const j = await claudeJson(ctx, system, `Crea ${extra} esercizi: ${typeText}.\nArgomento: ${what}` + seed, 5000, 100);
+  let items = dropRepeats(cleanItems(Array.isArray(j.items) ? j.items : [], types, extra, true), recent).slice(0, n);
+  if (items.length < n && Date.now() - t0 < 25000) {
+    const missing = n - items.length;
+    try {
+      const j2 = await claudeJson(ctx, system, `Crea ${missing + 3} esercizi: ${typeText}.\nArgomento: ${what}` + seed
+        + '\nQueste frasi le ho già: NON ripeterle né riformularle:\n- ' + items.map((i) => i.q).join('\n- '), 4000, 30);
+      const more = dropRepeats(cleanItems(Array.isArray(j2.items) ? j2.items : [], types, missing + 3, true), recent.concat(items.map((i) => normStem(i.q))));
+      items = items.concat(more).slice(0, n);
+    } catch (e) { /* il primo giro basta: meno esercizi è meglio di nessuno */ }
+  }
   if (items.length < 3) throw new HttpError(502, 'Esercizi non utilizzabili, riprova.');
   await updateData(ctx.store, ctx.user, (dd) => remember(dd, [], items.map((i) => i.q)));
   return { items, topic: topicId, label };

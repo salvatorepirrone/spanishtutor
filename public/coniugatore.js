@@ -62,7 +62,8 @@ var SPV = (function () {
       else if (/c[ei]r$/.test(inf) && !zc && /[^aeiouáéíóú]c$/.test(s)) s = s.slice(0, -1) + 'z';
     }
     // i tra due vocali diventa y (leyó, cayendo, construyó); dopo vocale forte le desinenze con i accentata portano l'accento (leíste, caímos).
-    if (/^(ió|ie)/.test(end) && (/[aeo]$/.test(s) || (tags.indexOf('y') >= 0 && /u$/.test(s)))) end = 'y' + end.slice(1);
+    if (/^(ió|ie)/.test(end) && /(ñ|ll)$/.test(s)) end = end.slice(1);
+    else if (/^(ió|ie)/.test(end) && (/[aeo]$/.test(s) || (tags.indexOf('y') >= 0 && /u$/.test(s)))) end = 'y' + end.slice(1);
     else if (/^(iste|imos|ís|í$)/.test(end) && /[aeo]$/.test(s)) end = 'í' + end.slice(end.charAt(0) === 'í' ? 1 : 1);
     return s + end;
   }
@@ -193,6 +194,13 @@ var SPV = (function () {
   def('querer', 'volere, amare', 'ie', { indStem: 'quis', futStem: 'querr' });
   def('andar', 'camminare, andare', '', { indStem: 'anduv' });
 
+  def('reír', 'ridere', '', { pres: ['río', 'ríes', 'ríe', 'reímos', 'reís', 'ríen'], ind: ['reí', 'reíste', 'rio', 'reímos', 'reísteis', 'rieron'],
+    subj: ['ría', 'rías', 'ría', 'riamos', 'riais', 'rían'], ger: 'riendo', impTu: 'ríe' });
+  def('freír', 'friggere', '', { pres: ['frío', 'fríes', 'fríe', 'freímos', 'freís', 'fríen'], ind: ['freí', 'freíste', 'frio', 'freímos', 'freísteis', 'frieron'],
+    subj: ['fría', 'frías', 'fría', 'friamos', 'friais', 'frían'], ger: 'friendo', part: 'frito', impTu: 'fríe' });
+  def('satisfacer', 'soddisfare', '', { yo: 'satisfago', indStem: 'satisfic', futStem: 'satisfar', part: 'satisfecho', impTu: 'satisfaz' });
+  def('yacer', 'giacere', '', { yo: 'yazco', subjStem: 'yazc' });
+
   // Derivati
   derive('man', 'tener', 'mantenere'); derive('con', 'tener', 'contenere'); derive('ob', 'tener', 'ottenere');
   derive('de', 'tener', 'fermare, trattenere'); derive('sos', 'tener', 'sostenere'); derive('re', 'tener', 'trattenere');
@@ -201,19 +209,30 @@ var SPV = (function () {
   derive('im', 'poner', 'imporre'); derive('o', 'poner', 'opporsi a'); derive('ex', 'poner', 'esporre');
   derive('dis', 'poner', 'disporre'); derive('re', 'poner', 'rimettere, reintegrare');
   derive('des', 'hacer', 'disfare'); derive('re', 'hacer', 'rifare');
+  derive('son', 'reír', 'sorridere');
+  derive('pre', 'decir', 'predire', { futStem: 'predecir', impTu: 'predice' }); derive('contra', 'decir', 'contraddire', { futStem: 'contradecir', impTu: 'contradice' });
+  derive('entre', 'tener', 'intrattenere'); derive('pro', 'venir', 'provenire'); derive('pos', 'poner', 'posporre'); derive('sobre', 'salir', 'sporgere, eccellere');
   derive('a', 'traer', 'attrarre'); derive('con', 'traer', 'contrarre'); derive('dis', 'traer', 'distrarre');
   derive('ex', 'traer', 'estrarre'); derive('sus', 'traer', 'sottrarre');
 
   // Cambio vocalico
   var ie = 'pensar:pensare|cerrar:chiudere|empezar:cominciare|comenzar:cominciare|despertar:svegliare|recomendar:consigliare|sentar:far sedere|acertar:azzeccare|' +
            'perder:perdere|entender:capire|defender:difendere|encender:accendere|descender:scendere|' +
-           'merendar:fare merenda|regar:annaffiare|negar:negare|atravesar:attraversare|temblar:tremare';
+           'merendar:fare merenda|regar:annaffiare|negar:negare|atravesar:attraversare|temblar:tremare|' +
+           'tropezar:inciampare|nevar:nevicare|atender:occuparsi di, servire|extender:estendere|ascender:salire|encerrar:rinchiudere|calentar:scaldare|confesar:confessare|' +
+           'gobernar:governare|helar:gelare|apretar:stringere|fregar:strofinare|cegar:accecare|arrendar:affittare|tender:tendere, stendere|apacentar:far pascolare';
   var ue = 'contar:contare, raccontare|encontrar:trovare|recordar:ricordare|costar:costare|mostrar:mostrare|probar:provare|almorzar:pranzare|soñar:sognare|volar:volare|' +
            'mover:muovere|doler:fare male|llover:piovere|devolver:restituire|volver:tornare|resolver:risolvere|envolver:avvolgere|revolver:rimescolare|' +
-           'acostar:mettere a letto|apostar:scommettere|aprobar:approvare|rogar:pregare|sonar:suonare|colgar:appendere';
-  var ieI = 'sentir:sentire, provare|preferir:preferire|mentir:mentire|divertir:divertire|hervir:bollire|sugerir:suggerire|convertir:convertire|advertir:avvertire|referir:riferire';
+           'acostar:mettere a letto|apostar:scommettere|aprobar:approvare|rogar:pregare|sonar:suonare|colgar:appendere|' +
+           'volcar:rovesciare|poblar:popolare|forzar:forzare|renovar:rinnovare|demostrar:dimostrare|comprobar:verificare|soler:essere solito|tostar:tostare|' +
+           'consolar:consolare|acordar:accordare|rodar:rotolare, girare|oler:odorare|torcer:torcere|disolver:sciogliere|probar:provare|esforzar:sforzare';
+  var ieI = 'sentir:sentire, provare|preferir:preferire|mentir:mentire|divertir:divertire|hervir:bollire|sugerir:suggerire|convertir:convertire|advertir:avvertire|referir:riferire|' +
+           'invertir:investire|herir:ferire|digerir:digerire|requerir:richiedere|consentir:acconsentire|arrepentir:pentirsi|transferir:trasferire|inferir:dedurre|' +
+           'discernir:discernere|diferir:differire|interferir:interferire|preferir:preferire';
   var ueU = 'dormir:dormire|morir:morire';
-  var iT = 'pedir:chiedere|servir:servire|repetir:ripetere|vestir:vestire|medir:misurare|despedir:congedare|impedir:impedire|competir:competere|elegir:scegliere|corregir:correggere|seguir:seguire|conseguir:ottenere, riuscire|perseguir:perseguire|reñir:litigare';
+  var iT = 'pedir:chiedere|servir:servire|repetir:ripetere|vestir:vestire|medir:misurare|despedir:congedare|impedir:impedire|competir:competere|elegir:scegliere|corregir:correggere|seguir:seguire|conseguir:ottenere, riuscire|perseguir:perseguire|reñir:litigare|' +
+           'concebir:concepire|rendir:rendere|teñir:tingere|proseguir:proseguire|regir:reggere|derretir:sciogliere|embestir:investire|gemir:gemere|ceñir:cingere|' +
+           'desmentir:smentire|investir:investire|colegir:dedurre';
   function bulk(list, tag) { list.split('|').forEach(function (x) { var a = x.split(':'); if (!V[a[0]]) def(a[0], a[1], tag); }); }
   bulk(ie, 'ie'); bulk(ue, 'ue'); bulk(ieI, 'ie-i'); bulk(ueU, 'ue-u'); bulk(iT, 'i');
   V['volver'].irr = { part: 'vuelto' }; V['devolver'].irr = { part: 'devuelto' }; V['resolver'].irr = { part: 'resuelto' };
@@ -223,13 +242,18 @@ var SPV = (function () {
 
   // -zco, -uyo, accenti
   bulk('conocer:conoscere|parecer:sembrare|ofrecer:offrire|nacer:nascere|crecer:crescere|agradecer:ringraziare|aparecer:apparire|desaparecer:scomparire|establecer:stabilire|' +
-       'merecer:meritare|obedecer:obbedire|permanecer:rimanere|reconocer:riconoscere|pertenecer:appartenere|ofrecer:offrire', 'zc');
+       'merecer:meritare|obedecer:obbedire|permanecer:rimanere|reconocer:riconoscere|pertenecer:appartenere|ofrecer:offrire|' +
+       'lucir:risplendere|enriquecer:arricchire|entristecer:rattristare|favorecer:favorire|padecer:patire|carecer:mancare|amanecer:albeggiare|anochecer:farsi notte|' +
+       'agradecer:ringraziare|florecer:fiorire|fortalecer:rafforzare|enloquecer:impazzire|envejecer:invecchiare|palidecer:impallidire|prevalecer:prevalere', 'zc');
   ['conducir:guidare', 'traducir:tradurre', 'producir:produrre', 'introducir:introdurre', 'reducir:ridurre'].forEach(function (x) {
     var a = x.split(':'); def(a[0], a[1], 'zc', { indStem: a[0].slice(0, -3) + 'j' });
   });
-  bulk('construir:costruire|incluir:includere|concluir:concludere|huir:fuggire|destruir:distruggere|contribuir:contribuire|distribuir:distribuire|sustituir:sostituire|influir:influire|excluir:escludere|atribuir:attribuire|disminuir:diminuire', 'y');
+  bulk('construir:costruire|incluir:includere|concluir:concludere|huir:fuggire|destruir:distruggere|contribuir:contribuire|distribuir:distribuire|sustituir:sostituire|influir:influire|excluir:escludere|atribuir:attribuire|disminuir:diminuire|' +
+       'instruir:istruire|constituir:costituire|fluir:fluire|retribuir:retribuire|restituir:restituire|obstruir:ostruire|intuir:intuire|recluir:rinchiudere|derruir:demolire', 'y');
   bulk('enviar:inviare|confiar:fidarsi|guiar:guidare|variar:variare|fiar:fidare|vaciar:svuotare|enfriar:raffreddare|ampliar:ampliare', 'ia');
-  bulk('continuar:continuare|actuar:agire|graduar:laureare|evaluar:valutare|situar:collocare|efectuar:effettuare', 'ua');
+  bulk('continuar:continuare|actuar:agire|graduar:laureare|evaluar:valutare|situar:collocare|efectuar:effettuare|habituar:abituare|acentuar:accentuare|insinuar:insinuare|' +
+       'reunir:riunire|prohibir:proibire|aislar:isolare|rehusar:rifiutare|aunar:unire|ahumar:affumicare|cohibir:inibire|' +
+       'esquiar:sciare|criar:allevare|espiar:spiare|fotografiar:fotografare|resfriar:raffreddare|vaciar:svuotare|desviar:deviare|rociar:spruzzare', 'ua');
 
   // Altre irregolarità (participi)
   def('abrir', 'aprire', '', { part: 'abierto' }); def('cubrir', 'coprire', '', { part: 'cubierto' }); derive('des', 'cubrir', 'scoprire');
@@ -244,7 +268,8 @@ var SPV = (function () {
        'contestar:rispondere|caminar:camminare|nadar:nuotare|cenar:cenare|desayunar:fare colazione|ducharse:farsi la doccia|llorar:piangere|besar:baciare|apagar:spegnere|averiguar:accertare|' +
        'comer:mangiare|beber:bere|vender:vendere|correr:correre|aprender:imparare|comprender:comprendere|romper:rompere|temer:temere|responder:rispondere|' +
        'vivir:vivere|recibir:ricevere|subir:salire|decidir:decidere|compartir:condividere|partir:partire, dividere|cumplir:compiere, rispettare|sufrir:soffrire|permitir:permettere|' +
-       'coger:prendere|escoger:scegliere|proteger:proteggere|recoger:raccogliere|dirigir:dirigere|exigir:esigere|vencer:vincere|convencer:convincere|esparcir:spargere', '');
+       'coger:prendere|escoger:scegliere|proteger:proteggere|recoger:raccogliere|dirigir:dirigere|exigir:esigere|vencer:vincere|convencer:convincere|esparcir:spargere|' +
+       'distinguir:distinguere|extinguir:estinguere|surgir:sorgere|fingir:fingere|corregir:correggere|afligir:affliggere|rugir:ruggire|urgir:urgere', '');
   Object.keys(V).forEach(function (k) { /* nessun controllo: l'elenco è curato a mano */ });
 
   // ---------------------------------------------------------------- descrizioni delle irregolarità
@@ -337,6 +362,9 @@ var SPV = (function () {
     PERSONS: PERSONS, IMP_PERSONS: IMP_PERSONS, TENSES: TENSES, verbs: V, full: full, conj: conj, parse: parse, suggest: suggest, plausible: plausible,
     list: function () { return Object.keys(V).sort(); },
     irregularTop: ['ser', 'estar', 'ir', 'tener', 'hacer', 'poder', 'querer', 'decir', 'venir', 'poner', 'saber', 'ver', 'dar', 'salir', 'traer', 'oír', 'caer', 'haber',
-                   'pedir', 'dormir', 'volver', 'seguir', 'sentir', 'pensar', 'empezar', 'jugar', 'conocer', 'construir', 'leer', 'conducir', 'andar', 'caber', 'morir', 'abrir', 'escribir', 'romper', 'mantener', 'proponer']
+                   'pedir', 'dormir', 'volver', 'seguir', 'sentir', 'pensar', 'empezar', 'jugar', 'conocer', 'construir', 'leer', 'conducir', 'andar', 'caber', 'morir', 'abrir', 'escribir', 'romper', 'mantener', 'proponer',
+                   'reír', 'sonreír', 'freír', 'parecer', 'ofrecer', 'nacer', 'crecer', 'agradecer', 'oler', 'huir', 'elegir', 'corregir', 'repetir', 'servir', 'preferir', 'mentir',
+                   'recordar', 'contar', 'encontrar', 'mostrar', 'costar', 'entender', 'perder', 'mover', 'doler', 'despertar', 'cerrar', 'comenzar', 'almorzar', 'divertir', 'vestir',
+                   'reñir', 'predecir', 'satisfacer', 'valer', 'cubrir', 'descubrir', 'deshacer', 'detener', 'obtener', 'componer', 'suponer', 'traducir', 'producir', 'incluir', 'destruir', 'creer']
   };
 })();
